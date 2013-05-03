@@ -2,7 +2,7 @@
 <resources>
 
     <string name="app_name">App Search</string>
-    <string name="menu_settings">About</string>
+    <string name="menu_about">About</string>
     <string name="search_actions">Search</string>
     <string name="search_hint">Search your apps</string>
     <string name="launching_app">Launching %s</string>

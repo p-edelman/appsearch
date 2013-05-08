@@ -47,10 +47,11 @@ public class MainActivity extends Activity {
                                             // a waiting spinner is presented
                                             // to let her know something is
                                             // happening.
+  private AboutDialog    m_about_dialog;    // The "about" dialog.
   
   @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+  protected void onCreate(Bundle saved_instance) {
+    super.onCreate(saved_instance);
     setContentView(R.layout.activity_main);
     
     // Attach the search system to the SearchView in the layout
@@ -97,6 +98,7 @@ public class MainActivity extends Activity {
     // App should have been reset on exit, but occasionally the app is not
     // stopped, so no reset was fired. To make sure, we reset it once again.
     reset();
+    Log.d("Status", "App restarted");
     
     // Every time onResume is called, the apps are indexed again.
     Intent app_index_intent = new Intent(this, AppIndexService.class);
@@ -106,25 +108,33 @@ public class MainActivity extends Activity {
   }
 
   @Override
-  protected void onStop() {
+  protected void onPause() {
     // Clear everything for fresh search when we start up again.
     reset();
-    super.onStop();
+    Log.d("Status", "App paused");
+    super.onPause();
   }
   
   /** Reset the app for a fresh search: clear results list, search box and
    *  progress spinner.
    */
   private void reset() {
+    Log.d("Reset", "Resetting");
     // Clear results
     AppArrayAdapter adapter = (AppArrayAdapter)m_results_view.getAdapter(); 
     if (adapter != null) {
+      Log.d("Reset", "Clearing adapter");
       adapter.clear();
     }
     m_search_view.setQuery("", false);
+    
+    if (m_about_dialog != null) {
+      m_about_dialog.dismiss();
+    }
 
     // Remove progress dialog
     m_launch_progress.dismiss();
+    Log.d("Reset", "Everything clean");
   }
   
   /** Start a {link SearchThread} to perform a fuzzy match on the given query.
@@ -191,8 +201,10 @@ public class MainActivity extends Activity {
   public boolean onOptionsItemSelected (MenuItem item) {
     if (item.getItemId() == R.id.menu_about) {
       FragmentManager fm = getFragmentManager();
-      AboutDialog dialog = new AboutDialog();
-      dialog.show(fm, "dialog_about");
+      if (m_about_dialog == null) {
+        m_about_dialog = new AboutDialog();
+      }
+      m_about_dialog.show(fm, "dialog_about");
 
       return true;
     }

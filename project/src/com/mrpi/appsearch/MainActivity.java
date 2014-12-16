@@ -1,5 +1,7 @@
 package com.mrpi.appsearch;
 
+import java.util.ArrayList;
+
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.ProgressDialog;
@@ -8,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -38,7 +41,7 @@ public class MainActivity extends Activity {
   private SearchView     m_search_view;     // The GUI SearchView element
   private ListView       m_results_view;    // The GUI ListView to present the
                                             // results of the search.
-  private SearchThread   m_search_thread;   // The background thread to perform
+  private AsyncTask<String, Void, ArrayList<AppData>>  m_search_thread;   // The background thread to perform
                                             // the search. It is needed to keep
                                             // this instance so it can be
                                             // cancelled when a new query
@@ -108,11 +111,11 @@ public class MainActivity extends Activity {
   }
 
   @Override
-  protected void onPause() {
+  protected void onStop() {
     // Clear everything for fresh search when we start up again.
     reset();
-    Log.d("Status", "App paused");
-    super.onPause();
+    Log.d("Status", "App stopped");
+    super.onStop();
   }
   
   /** Reset the app for a fresh search: clear results list, search box and
@@ -125,6 +128,7 @@ public class MainActivity extends Activity {
     if (adapter != null) {
       Log.d("Reset", "Clearing adapter");
       adapter.clear();
+      Log.d("Reset", "Adapter now has " + adapter.getCount() + " items");
     }
     m_search_view.setQuery("", false);
     
@@ -149,12 +153,18 @@ public class MainActivity extends Activity {
       m_search_thread = new SearchThread(this);
       m_search_thread.execute(query);
     } else {
-      // If the user clears the view, we don't clean up the list of results but
+      if (m_search_thread != null) {
+        m_search_thread.cancel(true);
+      }
+      m_search_thread = new FindMostUsedThread(this);
+      m_search_thread.execute(query);
+
+/*      // If the user clears the view, we don't clean up the list of results but
       // we remove the highlighting of the matched letters.
       AppArrayAdapter adapter = ((AppArrayAdapter)m_results_view.getAdapter());
       if (adapter != null) {
         adapter.renderClear();
-      }
+      }*/
     }
   }
   
@@ -169,7 +179,8 @@ public class MainActivity extends Activity {
   
     // Now get the accompanying package name from the cache to actually
     // launch the app.
-    final SQLiteDatabase db = AppCacheOpenHelper.getInstance(MainActivity.this).getReadableDatabase();
+    AppCacheOpenHelper cache_helper = AppCacheOpenHelper.getInstance(MainActivity.this);
+    final SQLiteDatabase db = cache_helper.getReadableDatabase();
     final Cursor cursor = db.rawQuery("SELECT package_name FROM apps WHERE public_name=?", new String[]{name});
     if (cursor.getCount() > 0) {
       cursor.moveToFirst();
@@ -179,6 +190,10 @@ public class MainActivity extends Activity {
       m_launch_progress.setTitle(String.format(getString(R.string.launching_app), name));
       m_launch_progress.setMessage(getString(R.string.please_wait));
       m_launch_progress.show();
+      
+      // Save the launch time slot to the database
+      long slot = AppCacheOpenHelper.getTimeSlot();
+      cache_helper.countAppLaunch(name, package_name);
       
       // Now, launch the app.
       Intent launch_intent = getPackageManager().getLaunchIntentForPackage(package_name);

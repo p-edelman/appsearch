@@ -41,7 +41,7 @@ public class MainActivity extends Activity {
   private SearchView     m_search_view;     // The GUI SearchView element
   private ListView       m_results_view;    // The GUI ListView to present the
                                             // results of the search.
-  private AsyncTask<String, Void, ArrayList<AppData>>  m_search_thread;   // The background thread to perform
+  private AsyncTask<String, Void, ArrayList<AppData>> m_search_thread;   // The background thread to perform
                                             // the search. It is needed to keep
                                             // this instance so it can be
                                             // cancelled when a new query
@@ -153,18 +153,13 @@ public class MainActivity extends Activity {
       m_search_thread = new SearchThread(this);
       m_search_thread.execute(query);
     } else {
+      // If the user clears the view, we display the default list of most wanted
+      // applications.
       if (m_search_thread != null) {
         m_search_thread.cancel(true);
       }
       m_search_thread = new FindMostUsedThread(this);
       m_search_thread.execute(query);
-
-/*      // If the user clears the view, we don't clean up the list of results but
-      // we remove the highlighting of the matched letters.
-      AppArrayAdapter adapter = ((AppArrayAdapter)m_results_view.getAdapter());
-      if (adapter != null) {
-        adapter.renderClear();
-      }*/
     }
   }
   

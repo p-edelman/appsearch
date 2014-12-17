@@ -26,15 +26,11 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
   
   // The central package manager
   private PackageManager m_package_manager;
-
-  // Flag to indicate whether the matched characters should be highlighted.
-  private boolean m_render_clear;
   
   public AppArrayAdapter(Context context, int textview_resource_id, List<AppData> app_data) {
     super(context, textview_resource_id, app_data);
     m_app_data        = app_data;
     m_package_manager = context.getPackageManager();
-    m_render_clear    = false;
   }
 
   /** Format a single app from the list and return it as a {@link View} that can
@@ -66,22 +62,14 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
 
     // Set text; make the matching letters underlined and bold
     text_view.setText(app_data.name, TextView.BufferType.SPANNABLE);
-    if (!m_render_clear) {
-      Spannable spannable = (Spannable)text_view.getText();
+    Spannable spannable = (Spannable)text_view.getText();
+    if (app_data.char_matches != null) {
       for (Integer index : app_data.char_matches) {
         spannable.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), index, index + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         spannable.setSpan(new UnderlineSpan(), index, index + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
       }
     }
-    
-    return row_view;
-  }
 
-  /** Special method to re-render the results list but without the highlighting
-   *  of the matched characters. 
-   */
-  public void renderClear() {
-    m_render_clear = true;
-    notifyDataSetChanged();
+    return row_view;
   }
 }

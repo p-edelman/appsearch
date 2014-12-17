@@ -36,7 +36,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   private static final String SCHEMA_INSTALLED = "(public_name TEXT PRIMARY KEY, package_name TEXT)";
   
   /** The schema for the table with the app usage. */
-  private static final String SCHEMA_USAGE = "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER)";
+  private static final String SCHEMA_USAGE = "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER, PRIMARY KEY (public_name, day, time_slot))";
   
   private AppCacheOpenHelper(Context context) {
     super(context, DB_NAME, null, DB_VERSION);
@@ -67,7 +67,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     Log.d("AppSearch", "New version: " + new_version);
     if ((old_version == 1) && (new_version == 2)) {
       db.beginTransaction();
-      db.execSQL("DROP TABLE usage;");
       db.execSQL("CREATE TABLE usage " + SCHEMA_USAGE + ";");
       db.setTransactionSuccessful();
       db.endTransaction();

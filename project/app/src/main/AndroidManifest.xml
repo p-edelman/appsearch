@@ -44,8 +44,10 @@
                 android:resource="@xml/searchable" />
         </activity>
 
+<!--    TODO: Here comes a database cleanup service
         <service android:name="com.mrpi.appsearch.AppIndexService" >
         </service>
+-->
 
         <receiver android:name="com.mrpi.appsearch.AppsChangedReceiver" >
             <intent-filter>

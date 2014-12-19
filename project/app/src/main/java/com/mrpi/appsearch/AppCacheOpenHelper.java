@@ -17,12 +17,6 @@ import android.util.Log;
  *  all components and threads.
  *  <p>
  *  Warning: the database connection may <b>never</b> be closed!
- *  <p>
- *  The database uses a table called "apps" that can be used for searching, and
- *  a shadow table called "dirty" to build a new index. The method
- *  {@link #switchDirty()} needs to be called when indexing is complete to
- *  make the "dirty" table the new "apps" table and build a new empty dirty
- *  table.  
  */
 public class AppCacheOpenHelper extends SQLiteOpenHelper {
 
@@ -33,11 +27,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   private static final int    DB_VERSION = 2;
   private static final String DB_NAME    = "apps";
 
-  /** The schema for the table with installed apps. */
-  public static final String TBL_APPS          = "apps";
-  public static final String TBL_APPS_DIRTY    = "dirty";
-  public static final String SCHEMA_INSTALLED  = "(public_name TEXT PRIMARY KEY, package_name TEXT)";
-  
   /** The schema for the tables with the app usage. */
   public static final String TBL_USAGE_ALL     = "usage_all";
   public static final String TBL_USAGE_DAY     = "usage_day";
@@ -63,8 +52,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
 
   @Override
   public void onCreate(SQLiteDatabase db) {
-    db.execSQL("CREATE TABLE " + TBL_APPS + " " + SCHEMA_INSTALLED + ";");
-    db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");
     db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL + ";");
     db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY + ";");
     db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK + ";");
@@ -82,6 +69,8 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     Log.d("AppSearch", "New version: " + new_version);
     if ((old_version == 1) && (new_version == 2)) {
       db.beginTransaction();
+      db.execSQL("DROP TABLE apps;");
+      db.execSQL("DROP TABLE dirty;");
       db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL + ";");
       db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY + ";");
       db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK + ";");
@@ -91,22 +80,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     }
   }
 
-  /** After the database has been filled with updated app data, the old "app"
-   *  table is switched out for the new one, and a new empty "dirty" table is 
-   *  provided.
-   */
-  public void switchDirty() {
-    Log.d("AppSearch", "Making the switch");
-    SQLiteDatabase db = getWritableDatabase();
-    db.beginTransaction();
-    db.execSQL("DROP TABLE " + TBL_APPS + ";");
-    db.execSQL("ALTER TABLE " + TBL_APPS_DIRTY + " RENAME TO " + TBL_APPS + ";");
-    db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");
-    db.setTransactionSuccessful();
-    db.endTransaction();
-    Log.d("AppSearch", "Switch made");
-  }
-  
   public static long getTimeSlot() {
     Calendar now = Calendar.getInstance();
     long slot = (now.get(Calendar.HOUR_OF_DAY) * 12) +

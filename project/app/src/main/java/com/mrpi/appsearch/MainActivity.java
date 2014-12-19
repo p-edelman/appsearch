@@ -1,6 +1,7 @@
 package com.mrpi.appsearch;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import android.app.Activity;
 import android.app.FragmentManager;
@@ -8,6 +9,9 @@ import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
@@ -22,18 +26,12 @@ import android.widget.SearchView;
 
 /** The main Activity for the app.
  *  <p>
- *  To make the app speedy and snappy, parallelization is employed in two ways.
- *  The first is for indexing the installed apps. This is delegated to a
- *  {@link AppIndexService} running in the background. The tradeoff is accuracy:
- *  while the background service is running (which may take up to tens of
- *  seconds), the search is performed on a cached index.  
- *  <p>
- *  Also searching and subsequently formatting the results is done in a parallel
- *  process through {@link SearchThread}. This prevents the keyboard from
- *  blocking when a search is performed. Although this is quite fast in general,
- *  it can sometimes hang when starting up. When more characters are typed while
- *  the current search isn't finished, it is aborted, further speeding up the
- *  search.
+ *  To make the app speedy and snappy, searching and subsequently formatting the
+ *  results is done in a parallel process through {@link SearchThread}. This
+ *  prevents the keyboard from blocking when a search is performed. Although
+ *  this is quite fast in general, it can sometimes hang when starting up. When
+ *  more characters are typed while the current search isn't finished, it is
+ *  aborted, further speeding up the search.
  */
 public class MainActivity extends Activity {
 
@@ -41,7 +39,8 @@ public class MainActivity extends Activity {
   private SearchView     m_search_view;     // The GUI SearchView element
   private ListView       m_results_view;    // The GUI ListView to present the
                                             // results of the search.
-  private AsyncTask<String, Void, ArrayList<AppData>> m_search_thread;   // The background thread to perform
+  private AsyncTask<String, Void, ArrayList<AppData>> m_search_thread;
+                                            // The background thread to perform
                                             // the search. It is needed to keep
                                             // this instance so it can be
                                             // cancelled when a new query
@@ -51,7 +50,11 @@ public class MainActivity extends Activity {
                                             // to let her know something is
                                             // happening.
   private AboutDialog    m_about_dialog;    // The "about" dialog.
-  
+
+  private ArrayList<AppData> m_app_list;    // The list of applications
+                                            // available on the device, that is
+                                            // update on every resume.
+
   @Override
   protected void onCreate(Bundle saved_instance) {
     super.onCreate(saved_instance);
@@ -104,9 +107,8 @@ public class MainActivity extends Activity {
     Log.d("Status", "App restarted");
     
     // Every time onResume is called, the apps are indexed again.
-    Intent app_index_intent = new Intent(this, AppIndexService.class);
-    startService(app_index_intent);
-    
+    findInstalledApps();
+
     super.onResume();
   }
 
@@ -117,7 +119,39 @@ public class MainActivity extends Activity {
     Log.d("Status", "App stopped");
     super.onStop();
   }
-  
+
+  /** Update the list of installed apps on the device.
+   *  <p>
+   *  This list can be retrieved with the {@link #getAppList()} method.
+   */
+  private void findInstalledApps() {
+    final PackageManager pm = getPackageManager();
+    final Intent main_intent = new Intent(Intent.ACTION_MAIN, null);
+    main_intent.addCategory(Intent.CATEGORY_LAUNCHER);
+    final List<ResolveInfo> packages = pm.queryIntentActivities(main_intent, 0);
+
+    final String own_name = getString(R.string.app_name);
+
+    // Index the necessary info for each app
+    m_app_list = new ArrayList<AppData>();
+    for (ResolveInfo resolve_info : packages) {
+      AppData app_data = new AppData();
+      ActivityInfo activity_info = resolve_info.activityInfo;
+      app_data.name          = resolve_info.loadLabel(pm).toString();
+      app_data.package_name  = activity_info.applicationInfo.packageName.toString();
+      if (!app_data.name.equals(own_name)) { // Exclude self from list
+        m_app_list.add(app_data);
+      }
+    };
+    Log.d("AppSearch", "Indexed installed apps");
+  }
+
+  /** Get the list of installed apps on this device (minus this app itself).
+   *  @return a list of {@link AppData} objects of all the installed apps. */
+  public ArrayList<AppData> getAppList() {
+    return m_app_list;
+  }
+
   /** Reset the app for a fresh search: clear results list, search box and
    *  progress spinner.
    */
@@ -170,36 +204,23 @@ public class MainActivity extends Activity {
    */
   private void launchApp(AdapterView<?> parent, int position) {
     // Get the app name from the GUI list
-    final String name = ((AppData)parent.getItemAtPosition(position)).name;
+    final String name         = ((AppData)parent.getItemAtPosition(position)).name;
+    final String package_name = ((AppData)parent.getItemAtPosition(position)).package_name;
     Log.d("AppSearch", "Launching app " + name);
   
-    // Now get the accompanying package name from the cache to actually
-    // launch the app.
-    AppCacheOpenHelper cache_helper = AppCacheOpenHelper.getInstance(MainActivity.this);
-    final SQLiteDatabase db = cache_helper.getReadableDatabase();
-    final Cursor cursor = db.rawQuery("SELECT package_name FROM " + AppCacheOpenHelper.TBL_APPS + " WHERE public_name=?", new String[]{name});
-    if (cursor.getCount() > 0) {
-      cursor.moveToFirst();
-      final String package_name = cursor.getString(0);
-
-      // Show a waiting dialog
-      m_launch_progress.setTitle(String.format(getString(R.string.launching_app), name));
-      m_launch_progress.setMessage(getString(R.string.please_wait));
-      m_launch_progress.show();
+    // Show a waiting dialog
+    m_launch_progress.setTitle(String.format(getString(R.string.launching_app), name));
+    m_launch_progress.setMessage(getString(R.string.please_wait));
+    m_launch_progress.show();
       
-      // Save the launch time slot to the database
-      long slot = AppCacheOpenHelper.getTimeSlot();
-      cache_helper.countAppLaunch(name, package_name);
+    // Save the launch time slot to the database
+    AppCacheOpenHelper.getInstance(this).countAppLaunch(name, package_name);
       
-      // Now, launch the app.
-      Intent launch_intent = getPackageManager().getLaunchIntentForPackage(package_name);
-      // TODO: When we're operating on an old cache, an app might be removed
-      // we need to handle that.
-      startActivity(launch_intent);
-    } else {
-      // TODO: App was apparently removed, we need to handle that.
-      Log.d("AppSearch", "App cannot be found");
-    }
+    // Now, launch the app.
+    Intent launch_intent = getPackageManager().getLaunchIntentForPackage(package_name);
+    // TODO: When we're operating on an old cache, an app might be removed
+    // we need to handle that.
+    startActivity(launch_intent);
   }
 
   @Override
@@ -221,5 +242,4 @@ public class MainActivity extends Activity {
     }
     return super.onOptionsItemSelected(item);
   }
-
 }

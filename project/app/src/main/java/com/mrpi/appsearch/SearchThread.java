@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import android.app.Activity;
 import android.database.Cursor;
@@ -28,9 +30,9 @@ public class SearchThread extends AsyncTask<String, Void, ArrayList<AppData>> {
 
   // We need to remember the parent activity so that we can find the GUI element
   // for the results list.
-  private Activity m_parent_activity;
+  private MainActivity m_parent_activity;
   
-  public SearchThread (Activity parent_activity) {
+  public SearchThread (MainActivity parent_activity) {
     this.m_parent_activity = parent_activity;
   }
   
@@ -43,42 +45,35 @@ public class SearchThread extends AsyncTask<String, Void, ArrayList<AppData>> {
   protected ArrayList<AppData> doInBackground(String... query_param) {
     final String query = query_param[0].toLowerCase();
     
-    // Query the database for all app names that have the characters in our
-    // query in the proper order, although not necessary adjacent to each
-    // other.
-    SQLiteDatabase cache = AppCacheOpenHelper.getInstance(m_parent_activity).getReadableDatabase();
-    String db_query = "%";
-    for (int pos = 0; pos < query.length(); pos++) db_query += query.charAt(pos) + "%";
-    Cursor cursor = cache.rawQuery("SELECT DISTINCT public_name, package_name FROM " + AppCacheOpenHelper.TBL_APPS + " WHERE public_name LIKE ?",  new String[]{db_query});
+    // Construct a regex that can fuzzy match the query to the name of the app
+    String regex = ".*";
+    for (int pos = 0; pos < query.length(); pos++) regex += query.charAt(pos) + ".*";
+    Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
 
-    // Put the results in a list of AppData.
-    final ArrayList<AppData> app_list = new ArrayList<AppData>();
-    boolean result = cursor.moveToFirst();
-    while (result && !isCancelled()) {
-      AppData app_data = new AppData();
-      app_data.name = cursor.getString(0);
-      app_data = getMatchRating(app_data, query);
-      app_data.package_name = cursor.getString(1);
-      app_list.add(app_data);
-      result = cursor.moveToNext();
+    // Copy all the matching apps to a new list.
+    final ArrayList<AppData> apps     = m_parent_activity.getAppList();
+    final ArrayList<AppData> filtered = new ArrayList<AppData>();
+    int index = 0;
+    while ((index < apps.size()) && !isCancelled()) {
+      AppData app_data = apps.get(index);
+      if (pattern.matcher(app_data.name).matches()) {
+        app_data = getMatchRating(app_data, query);
+        filtered.add(app_data);
+      }
+      index++;
     }
-    Log.d("AppSearch", "Found " + cursor.getCount() + " results");
-    
-    // Now we sort the list where:
-    // - Apps starting with query get displayed first
-    // - Then apps are sorted according to the number of characters in
-    //   between the query characters. 
-    
-    // Sort by comparing the two ratings
+    Log.d("AppSearch", "Found " + filtered.size() + " results");
+
+    // Sort by comparing the ratings
     if (!isCancelled()) {
-      Collections.sort(app_list, new Comparator<Object>() {
+      Collections.sort(filtered, new Comparator<Object>() {
         public int compare(Object obj1, Object obj2) {
           return ((AppData)obj1).match_rating - ((AppData)obj2).match_rating;
         }
       });
     }
 
-    return app_list;
+    return filtered;
   }
 
   /** When done, populate the results list. This is done on the GUI thread,
@@ -92,8 +87,8 @@ public class SearchThread extends AsyncTask<String, Void, ArrayList<AppData>> {
   
   /**
    * Calculate the "amount of match" between query and string. The lower the
-   * number, the better query is contained in the name. Along the way, mark the
-   * characters that match to the query.
+   * number, the better the query is contained in the name. Along the way, mark
+   * the characters that match to the query.
    * <p>
    * The lower the match rating, the better the match. -1 means the query is the
    * app name. If the query is contained is the name, the rating is the number

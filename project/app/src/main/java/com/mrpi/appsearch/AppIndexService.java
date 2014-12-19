@@ -64,7 +64,7 @@ public class AppIndexService extends IntentService {
       ContentValues values = new ContentValues();
       values.put("public_name",  app_data.name);
       values.put("package_name", app_data.package_name);
-      db.replace("dirty", null, values);
+      db.replace(AppCacheOpenHelper.TBL_APPS_DIRTY, null, values);
     }
     db.setTransactionSuccessful();
     db.endTransaction();

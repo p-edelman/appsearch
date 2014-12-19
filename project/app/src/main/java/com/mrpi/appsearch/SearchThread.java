@@ -49,7 +49,7 @@ public class SearchThread extends AsyncTask<String, Void, ArrayList<AppData>> {
     SQLiteDatabase cache = AppCacheOpenHelper.getInstance(m_parent_activity).getReadableDatabase();
     String db_query = "%";
     for (int pos = 0; pos < query.length(); pos++) db_query += query.charAt(pos) + "%";
-    Cursor cursor = cache.rawQuery("SELECT DISTINCT public_name, package_name FROM apps WHERE public_name LIKE ?",  new String[]{db_query});
+    Cursor cursor = cache.rawQuery("SELECT DISTINCT public_name, package_name FROM " + AppCacheOpenHelper.TBL_APPS + " WHERE public_name LIKE ?",  new String[]{db_query});
 
     // Put the results in a list of AppData.
     final ArrayList<AppData> app_list = new ArrayList<AppData>();

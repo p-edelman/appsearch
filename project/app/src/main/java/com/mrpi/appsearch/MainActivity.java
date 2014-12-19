@@ -155,6 +155,7 @@ public class MainActivity extends Activity {
     } else {
       // If the user clears the view, we display the default list of most wanted
       // applications.
+      Log.d("AppSearch", "Looking for most used apps");
       if (m_search_thread != null) {
         m_search_thread.cancel(true);
       }
@@ -176,7 +177,7 @@ public class MainActivity extends Activity {
     // launch the app.
     AppCacheOpenHelper cache_helper = AppCacheOpenHelper.getInstance(MainActivity.this);
     final SQLiteDatabase db = cache_helper.getReadableDatabase();
-    final Cursor cursor = db.rawQuery("SELECT package_name FROM apps WHERE public_name=?", new String[]{name});
+    final Cursor cursor = db.rawQuery("SELECT package_name FROM " + AppCacheOpenHelper.TBL_APPS + " WHERE public_name=?", new String[]{name});
     if (cursor.getCount() > 0) {
       cursor.moveToFirst();
       final String package_name = cursor.getString(0);

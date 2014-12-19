@@ -31,50 +31,56 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
     // The list that will hold our values
     ArrayList<AppData> app_list = new ArrayList<AppData>();
 
-    SQLiteDatabase cache;
+    SQLiteDatabase db;
     try {
-      cache = AppCacheOpenHelper.getInstance(m_parent_activity).getReadableDatabase();
+      db = AppCacheOpenHelper.getInstance(m_parent_activity).getReadableDatabase();
     } catch (SQLiteDatabaseLockedException e) {
       // TODO: Handle this properly
       Log.d("AppSearch", "Can't get a lock on the database!");
       return app_list;
     }
 
-    int day  = Calendar.getInstance().get(Calendar.DAY_OF_WEEK);
-    String day_str  = Integer.toString(day);
-    String slot_str = Long.toString(AppCacheOpenHelper.getTimeSlot());
-
-    // Get all apps for this time slot
-    String sql_query = "SELECT DISTINCT public_name, package_name, day, count " +
-                       "FROM usage" +
-                       "WHERE time_slot=?" +
-                       "ORDER BY count DESC";
-    Cursor cursor = cache.rawQuery(sql_query, new String[]{slot_str, day_str});
+    long time_slot = AppCacheOpenHelper.getTimeSlot();
+    int  day = Calendar.getInstance().get(Calendar.DAY_OF_WEEK);
+    String time_slot_str = Long.toString(time_slot);
+    String day_str       = Integer.toString(day);
 
     // Create an entry for each app with the score calculated by clicks and
     // day.
     Map<String, AppData> app_map = new HashMap<String, AppData>();
-    boolean result = cursor.moveToFirst();
-    while (result && !isCancelled()) {
-      String app_name = cursor.getString(0);
-      Log.d("AppSearch", "Found match on " + app_name);
-      AppData app_data = app_map.get(app_name);
-      if (app_data == null) {
-        app_data = new AppData();
-        app_map.put(app_name, app_data);
-      }
-      app_data.name         = cursor.getString(0);
-      app_data.package_name = cursor.getString(1);
-      if (cursor.getInt(2) == day) {
-        // There is a match on this particular day, so the match gets a boost
-        app_data.match_rating += cursor.getInt(3) * 7;
-      } else {
-        app_data.match_rating += cursor.getInt(3);
-      }
-      result = cursor.moveToNext();
-    }
+
+    // Get the top eight apps for this time slot and day
+    Cursor cursor = db.query(AppCacheOpenHelper.TBL_USAGE_WEEK,
+                             new String[]{"public_name", "package_name", "count"},
+                             "time_slot=? AND day=?",
+                             new String[]{time_slot_str, day_str},
+                             null, null,
+                             "count DESC", "8");
+    convertCursorToAppData(cursor, app_map, 14);
+    Log.d("MostUsed", "Got results for time and day");
     cursor.close();
 
+    // Get the top eight apps for this time slot only
+    cursor = db.query(AppCacheOpenHelper.TBL_USAGE_DAY,
+                      new String[]{"public_name", "package_name", "count"},
+                      "time_slot=?",
+                      new String[]{time_slot_str},
+                      null, null,
+                      "count DESC", "8");
+    convertCursorToAppData(cursor, app_map, 2);
+    Log.d("MostUsed", "Got results for time");
+    cursor.close();
+
+    // Get the top eight apps overall
+    cursor = db.query(AppCacheOpenHelper.TBL_USAGE_ALL,
+                      new String[]{"public_name", "package_name", "count"},
+                      null, null, null, null,
+                      "count DESC", "8");
+    convertCursorToAppData(cursor, app_map, 1);
+    Log.d("MostUsed", "Got results overall");
+    cursor.close();
+
+    // If the list is smaller than eight,
     // Now convert it to an ArrayList and sort the results by the ratings
     if (!isCancelled()) {
       app_list = new ArrayList<AppData>(app_map.values());
@@ -86,6 +92,23 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
     }
 
     return app_list;
+  }
+
+  void convertCursorToAppData(Cursor cursor, Map<String, AppData> app_map, long boost_factor) {
+    boolean result = cursor.moveToFirst();
+    while (result && !isCancelled()) {
+      String app_name = cursor.getString(0);
+      Log.d("MostUsed", "Got data: " + app_name + "," + cursor.getString(1) + "," + cursor.getString(2));
+      AppData app_data = app_map.get(app_name);
+      if (app_data == null) {
+        app_data = new AppData();
+        app_map.put(app_name, app_data);
+      }
+      app_data.name         = app_name;
+      app_data.package_name = cursor.getString(1);
+      app_data.match_rating += cursor.getInt(2) * boost_factor;
+      result = cursor.moveToNext();
+    }
   }
 
   /** When done, populate the results list. This is done on the GUI thread,

@@ -97,10 +97,14 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     }
   }
 
+  /** Get the current five minute slot of the day.
+   *  <p>
+   *  App activity is logged in time slots of five minutes, so daily app launch
+   *  at around the same time results in a count for the time slot every day. */
   public static long getTimeSlot() {
     Calendar now = Calendar.getInstance();
     long slot = (now.get(Calendar.HOUR_OF_DAY) * 12) +
-                Math.round((double)now.get(Calendar.MINUTE) / 5.0);
+                now.get(Calendar.MINUTE) / 5;
     return slot;
   }
   

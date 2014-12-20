@@ -1,8 +1,10 @@
 package com.mrpi.appsearch;
 import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -22,10 +24,18 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
 
   // The only instance, needed for the singleton mechanism
   private static AppCacheOpenHelper m_instance;
-  
-  // Housekeeping parameters
+
+  /** Housekeeping parameters */
   private static final int    DB_VERSION = 2;
   private static final String DB_NAME    = "apps";
+
+  /** The bonus values for each table */
+  public static final int BONUS_DAY  = 100;
+  public static final int BONUS_WEEK = 300;
+  public static final int BONUS_ALL  = 10;
+
+  /** The daily decay rate for the bonus values. */
+  public static final double DECAY_RATE = 0.1;
 
   /** The schema for the tables with the app usage. */
   public static final String TBL_USAGE_ALL     = "usage_all";
@@ -37,6 +47,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     "(public_name TEXT, package_name TEXT, time_slot INTEGER, count INTEGER, PRIMARY KEY (public_name, time_slot))";
   public static final String SCHEMA_USAGE_WEEK =
     "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER, PRIMARY KEY (public_name, day, time_slot))";
+
 
   private AppCacheOpenHelper(Context context) {
     super(context, DB_NAME, null, DB_VERSION);
@@ -52,9 +63,14 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
 
   @Override
   public void onCreate(SQLiteDatabase db) {
-    db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL + ";");
-    db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY + ";");
-    db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK + ";");
+    db.beginTransaction();
+    db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL);
+    db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY);
+    db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK);
+    db.execSQL("CREATE TABLE metadata (key TEXT, value INTEGER)");
+    db.setTransactionSuccessful();
+    db.endTransaction();
+    Log.d("AppSearch", "Database initialized");
   }
   
   @Override
@@ -74,6 +90,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
       db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL + ";");
       db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY + ";");
       db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK + ";");
+      db.execSQL("CREATE TABLE metadata (key TEXT, value INTEGER)");
       db.setTransactionSuccessful();
       db.endTransaction();
       Log.d("AppSearch", "Database upgraded to version 2");
@@ -88,22 +105,20 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   }
   
   public void countAppLaunch(String public_name, String package_name) {
+    decay();
+
     SQLiteDatabase db = getWritableDatabase();
-
-    long result;
-
     SQLiteStatement all_statement = db.compileStatement(
       "REPLACE INTO " + TBL_USAGE_ALL + " (public_name, package_name, count) VALUES (" +
         "?, ?, " +
         "COALESCE((" +
           "SELECT count FROM " + TBL_USAGE_ALL + " WHERE public_name=?" +
-        "), 0) + 1)");
+        "), 0) + ?)");
     all_statement.bindString(1, public_name);
     all_statement.bindString(2, package_name);
     all_statement.bindString(3, public_name);
-    result = all_statement.executeInsert();
-    Log.d("CountLaunch", all_statement.toString());
-    Log.d("CountLaunch", "Inserted overall value in row " + result);
+    all_statement.bindLong(4, BONUS_ALL);
+    all_statement.executeInsert();
 
     SQLiteStatement day_statement = db.compileStatement(
       "REPLACE INTO " + TBL_USAGE_DAY + " (public_name, package_name, time_slot, count) VALUES (" +
@@ -130,7 +145,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
 
     int adjacent = 5;
     while (adjacent > -6) {
-
       long tmp_slot = slot + adjacent;
       if (tmp_slot < 0) {
         // Time stamp was before midnight
@@ -148,21 +162,52 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
       week_statement.bindLong(6, tmp_slot);
       week_statement.bindLong(7, day);
 
-      // The time slots further away get progressively smaller bonuses
-      long count = (5 - (Math.abs(adjacent)));
-      day_statement.bindLong(6, count);
-      week_statement.bindLong(8, count);
-
-      result = day_statement.executeInsert();
-      Log.d("CountLaunch", day_statement.toString());
-      Log.d("CountLaunch", "Inserted day value in row " + result);
-
+      // Insert progressively smaller bonuses the further away we are from the
+      // time slot
+      day_statement.bindLong(6, BONUS_DAY - ((Math.abs(adjacent) * 5)));
+      day_statement.executeInsert();
+      week_statement.bindLong(8, BONUS_WEEK - ((Math.abs(adjacent) * 5)));
       week_statement.executeInsert();
-      Log.d("CountLaunch", week_statement.toString());
-      Log.d("CountLaunch", "Inserted week value in row " + result);
 
       adjacent--;
     }
     Log.d("AppSearch", "Logged the launch");
+  }
+
+  public void decay() {
+    // Check the date of the last decay.
+    int days_to_decay = 0;
+    int today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR);
+    SQLiteDatabase db = getWritableDatabase();
+    Cursor cursor = db.query("metadata", new String[]{"value"}, "key='last_decay'mu", null, null, null, null);
+    boolean success = cursor.moveToFirst();
+    if (success) {
+      int last_decay = cursor.getInt(0);
+      days_to_decay = today - last_decay;
+      if (days_to_decay < 0) {
+        // Happy new year!
+        Calendar today_date      = Calendar.getInstance();
+        Calendar last_decay_date = Calendar.getInstance();
+        last_decay_date.set(Calendar.DAY_OF_YEAR, last_decay);
+        long today_ms      = today_date.getTimeInMillis();
+        long last_decay_ms = last_decay_date.getTimeInMillis();
+        days_to_decay = (int)TimeUnit.MILLISECONDS.toDays(today_ms - last_decay_ms);
+      }
+    }
+    cursor.close();
+
+    for (int day = 0; day < days_to_decay; day++) {
+      // Decay all values by 10 percent
+      db.execSQL("UPDATE " + TBL_USAGE_ALL  + " SET count = round(count * 0.9)");
+      db.execSQL("UPDATE " + TBL_USAGE_WEEK + " SET count = round(count * 0.9)");
+      db.execSQL("UPDATE " + TBL_USAGE_DAY  + " SET count = round(count * 0.9)");
+
+      // Delete all entries that fall below 6 (they cannot decay any further).
+      // This happens after a little bit less than a month for an app that hasn't
+      // been clicked anymore.
+      db.delete(TBL_USAGE_ALL,  "count < 6", null);
+      db.delete(TBL_USAGE_WEEK, "count < 6", null);
+      db.delete(TBL_USAGE_DAY,  "count < 6", null);
+    }
   }
 }

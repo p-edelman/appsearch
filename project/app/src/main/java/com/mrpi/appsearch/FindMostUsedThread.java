@@ -56,7 +56,7 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
                              new String[]{time_slot_str, day_str},
                              null, null,
                              "count DESC", "8");
-    convertCursorToAppData(cursor, app_map, 14);
+    convertCursorToAppData(cursor, app_map);
     Log.d("MostUsed", "Got results for time and day");
     cursor.close();
 
@@ -67,7 +67,7 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
                       new String[]{time_slot_str},
                       null, null,
                       "count DESC", "8");
-    convertCursorToAppData(cursor, app_map, 2);
+    convertCursorToAppData(cursor, app_map);
     Log.d("MostUsed", "Got results for time");
     cursor.close();
 
@@ -76,7 +76,7 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
                       new String[]{"public_name", "package_name", "count"},
                       null, null, null, null,
                       "count DESC", "8");
-    convertCursorToAppData(cursor, app_map, 1);
+    convertCursorToAppData(cursor, app_map);
     Log.d("MostUsed", "Got results overall");
     cursor.close();
 
@@ -94,7 +94,7 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
     return app_list;
   }
 
-  void convertCursorToAppData(Cursor cursor, Map<String, AppData> app_map, long boost_factor) {
+  void convertCursorToAppData(Cursor cursor, Map<String, AppData> app_map) {
     boolean result = cursor.moveToFirst();
     while (result && !isCancelled()) {
       String app_name = cursor.getString(0);
@@ -102,11 +102,15 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
       AppData app_data = app_map.get(app_name);
       if (app_data == null) {
         app_data = new AppData();
+        app_data.name         = app_name;
+        app_data.package_name = cursor.getString(1);
+        app_data.match_rating = cursor.getInt(2);
         app_map.put(app_name, app_data);
+      } else {
+        if (cursor.getInt(2) > app_data.match_rating) {
+          app_data.match_rating = cursor.getInt(2);
+        }
       }
-      app_data.name         = app_name;
-      app_data.package_name = cursor.getString(1);
-      app_data.match_rating += cursor.getInt(2) * boost_factor;
       result = cursor.moveToNext();
     }
   }

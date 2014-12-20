@@ -27,7 +27,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
 
   /** Housekeeping parameters */
   private static final int    DB_VERSION = 2;
-  private static final String DB_NAME    = "apps";
+  private static final String DB_NAME    = "apps.sqlite";
 
   /** The bonus values for each table */
   public static final int BONUS_DAY  = 100;
@@ -41,13 +41,15 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   public static final String TBL_USAGE_ALL     = "usage_all";
   public static final String TBL_USAGE_DAY     = "usage_day";
   public static final String TBL_USAGE_WEEK    = "usage_week";
-  public static final String SCHEMA_USAGE_ALL  =
+  private static final String SCHEMA_USAGE_ALL  =
     "(public_name TEXT, package_name TEXT, count INTEGER, PRIMARY KEY (public_name))";
-  public static final String SCHEMA_USAGE_DAY  =
+  private static final String SCHEMA_USAGE_DAY  =
     "(public_name TEXT, package_name TEXT, time_slot INTEGER, count INTEGER, PRIMARY KEY (public_name, time_slot))";
-  public static final String SCHEMA_USAGE_WEEK =
+  private static final String SCHEMA_USAGE_WEEK =
     "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER, PRIMARY KEY (public_name, day, time_slot))";
 
+  /** The metadata table is a simple text key/numeric value storage. */
+  private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";
 
   private AppCacheOpenHelper(Context context) {
     super(context, DB_NAME, null, DB_VERSION);
@@ -67,7 +69,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL);
     db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY);
     db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK);
-    db.execSQL("CREATE TABLE metadata (key TEXT, value INTEGER)");
+    db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
     db.setTransactionSuccessful();
     db.endTransaction();
     Log.d("AppSearch", "Database initialized");
@@ -90,7 +92,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
       db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL + ";");
       db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY + ";");
       db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK + ";");
-      db.execSQL("CREATE TABLE metadata (key TEXT, value INTEGER)");
+      db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
       db.setTransactionSuccessful();
       db.endTransaction();
       Log.d("AppSearch", "Database upgraded to version 2");
@@ -178,16 +180,61 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     Log.d("AppSearch", "Logged the launch");
   }
 
+  /** Decay the click counts in the database for the number of days since the
+   *  last decay.
+   */
   public void decay() {
-    // Check the date of the last decay.
-    int days_to_decay = 0;
+    // Get the number of days to decay
     int today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR);
-    SQLiteDatabase db = getWritableDatabase();
-    Cursor cursor = db.query("metadata", new String[]{"value"}, "key='last_decay'mu", null, null, null, null);
+    int days_to_decay = getDaysSinceLastDecay(today);
+
+    if (days_to_decay > 0) {
+      Log.d("AppSearch", "Decaying " + days_to_decay + " days");
+      SQLiteDatabase db = getWritableDatabase();
+      db.beginTransaction();
+      for (int day = 0; day < days_to_decay; day++) {
+        // Decay all values by 10 percent
+        db.execSQL("UPDATE " + TBL_USAGE_ALL  + " SET count = round(count * 0.9)");
+        db.execSQL("UPDATE " + TBL_USAGE_WEEK + " SET count = round(count * 0.9)");
+        db.execSQL("UPDATE " + TBL_USAGE_DAY  + " SET count = round(count * 0.9)");
+
+        // Delete all entries that fall below 6 (they cannot decay any further).
+        // This happens after a little bit less than a month for an app that hasn't
+        // been clicked anymore.
+        db.delete(TBL_USAGE_ALL, "count < 6", null);
+        db.delete(TBL_USAGE_WEEK, "count < 6", null);
+        db.delete(TBL_USAGE_DAY, "count < 6", null);
+      }
+
+      // Write the decay day back to the database.
+      ContentValues values = new ContentValues();
+      values.put("field", "last_decay");
+      values.put("content", today);
+      db.replace("metadata", null, values);
+
+      db.setTransactionSuccessful();
+      db.endTransaction();
+    }
+  }
+
+  /** Get the number of days since the last time the decay operation was
+   *  performed.
+   *  @param to_when the target day, expressed as a day number in the year.
+   *  @return the number of days between the supplied day and the last decay
+   *          operation according the database. */
+  private int getDaysSinceLastDecay(int to_when) {
+    int days_to_decay = 0;
+    SQLiteDatabase db = getReadableDatabase();
+    Cursor cursor = db.query("metadata",
+                             new String[]{"content"},
+                             "field='last_decay'",
+                             null, null, null, null);
     boolean success = cursor.moveToFirst();
+    Log.d("Decay", "Found a result in the db");
     if (success) {
       int last_decay = cursor.getInt(0);
-      days_to_decay = today - last_decay;
+      Log.d("Decay", "Last decay is " + last_decay);
+      days_to_decay = to_when - last_decay;
       if (days_to_decay < 0) {
         // Happy new year!
         Calendar today_date      = Calendar.getInstance();
@@ -197,21 +244,15 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
         long last_decay_ms = last_decay_date.getTimeInMillis();
         days_to_decay = (int)TimeUnit.MILLISECONDS.toDays(today_ms - last_decay_ms);
       }
+    } else {
+      // There wasn't a timestamp in the database, so create one for today
+      ContentValues values = new ContentValues();
+      values.put("field", "last_decay");
+      values.put("content", Calendar.getInstance().get(Calendar.DAY_OF_YEAR));
+      db = getWritableDatabase();
+      db.insert("metadata", null, values);
     }
     cursor.close();
-
-    for (int day = 0; day < days_to_decay; day++) {
-      // Decay all values by 10 percent
-      db.execSQL("UPDATE " + TBL_USAGE_ALL  + " SET count = round(count * 0.9)");
-      db.execSQL("UPDATE " + TBL_USAGE_WEEK + " SET count = round(count * 0.9)");
-      db.execSQL("UPDATE " + TBL_USAGE_DAY  + " SET count = round(count * 0.9)");
-
-      // Delete all entries that fall below 6 (they cannot decay any further).
-      // This happens after a little bit less than a month for an app that hasn't
-      // been clicked anymore.
-      db.delete(TBL_USAGE_ALL,  "count < 6", null);
-      db.delete(TBL_USAGE_WEEK, "count < 6", null);
-      db.delete(TBL_USAGE_DAY,  "count < 6", null);
-    }
+    return days_to_decay;
   }
 }

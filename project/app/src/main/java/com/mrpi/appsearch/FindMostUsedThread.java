@@ -80,13 +80,13 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
     Log.d("MostUsed", "Got results overall");
     cursor.close();
 
-    // If the list is smaller than eight,
-    // Now convert it to an ArrayList and sort the results by the ratings
+    // Now convert it to an ArrayList and sort the results by the ratings, in
+    // descending order.
     if (!isCancelled()) {
       app_list = new ArrayList<AppData>(app_map.values());
       Collections.sort(app_list, new Comparator<Object>() {
         public int compare(Object obj1, Object obj2) {
-          return ((AppData)obj1).match_rating - ((AppData)obj2).match_rating;
+          return ((AppData)obj2).match_rating - ((AppData)obj1).match_rating;
         }
       });
     }
@@ -98,7 +98,6 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
     boolean result = cursor.moveToFirst();
     while (result && !isCancelled()) {
       String app_name = cursor.getString(0);
-      Log.d("MostUsed", "Got data: " + app_name + "," + cursor.getString(1) + "," + cursor.getString(2));
       AppData app_data = app_map.get(app_name);
       if (app_data == null) {
         app_data = new AppData();
@@ -111,6 +110,7 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
           app_data.match_rating = cursor.getInt(2);
         }
       }
+      Log.d("AppSearch", "Rating for " + app_name + " is " + app_data.match_rating);
       result = cursor.moveToNext();
     }
   }

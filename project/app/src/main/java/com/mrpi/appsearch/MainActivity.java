@@ -105,7 +105,12 @@ public class MainActivity extends Activity {
     // stopped, so no reset was fired. To make sure, we reset it once again.
     reset();
     Log.d("Status", "App restarted");
-    
+
+    // Populate the display with the most used apps
+    Log.d("AppSearch", "Looking for most used apps");
+    m_search_thread = new FindMostUsedThread(this);
+    m_search_thread.execute("");
+
     // Every time onResume is called, the apps are indexed again.
     findInstalledApps();
 
@@ -115,7 +120,7 @@ public class MainActivity extends Activity {
   @Override
   protected void onStop() {
     // Clear everything for fresh search when we start up again.
-    reset();
+    //reset();
     Log.d("Status", "App stopped");
     super.onStop();
   }
@@ -138,7 +143,7 @@ public class MainActivity extends Activity {
       AppData app_data = new AppData();
       ActivityInfo activity_info = resolve_info.activityInfo;
       app_data.name          = resolve_info.loadLabel(pm).toString();
-      app_data.package_name  = activity_info.applicationInfo.packageName.toString();
+      app_data.package_name  = activity_info.applicationInfo.packageName;
       if (!app_data.name.equals(own_name)) { // Exclude self from list
         m_app_list.add(app_data);
       }
@@ -160,9 +165,7 @@ public class MainActivity extends Activity {
     // Clear results
     AppArrayAdapter adapter = (AppArrayAdapter)m_results_view.getAdapter(); 
     if (adapter != null) {
-      Log.d("Reset", "Clearing adapter");
       adapter.clear();
-      Log.d("Reset", "Adapter now has " + adapter.getCount() + " items");
     }
     m_search_view.setQuery("", false);
     
@@ -212,7 +215,7 @@ public class MainActivity extends Activity {
     m_launch_progress.setTitle(String.format(getString(R.string.launching_app), name));
     m_launch_progress.setMessage(getString(R.string.please_wait));
     m_launch_progress.show();
-      
+
     // Save the launch time slot to the database
     AppCacheOpenHelper.getInstance(this).countAppLaunch(name, package_name);
       

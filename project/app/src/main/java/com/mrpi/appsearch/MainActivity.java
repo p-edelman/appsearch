@@ -55,11 +55,13 @@ public class MainActivity extends Activity {
                                             // available on the device, that is
                                             // update on every resume.
 
+  private CountAndDecay m_count_decay = null;
+
   @Override
   protected void onCreate(Bundle saved_instance) {
     super.onCreate(saved_instance);
     setContentView(R.layout.activity_main);
-    
+
     // Attach the search system to the SearchView in the layout
     SearchManager search_manager = (SearchManager)getSystemService(Context.SEARCH_SERVICE);
     m_search_view = (SearchView)findViewById(R.id.appSearchView);
@@ -217,7 +219,10 @@ public class MainActivity extends Activity {
     m_launch_progress.show();
 
     // Save the launch time slot to the database
-    AppCacheOpenHelper.getInstance(this).countAppLaunch(name, package_name);
+    if (m_count_decay == null) {
+      m_count_decay = new CountAndDecay(AppCacheOpenHelper.getInstance(this));
+    }
+    m_count_decay.countAppLaunch(name, package_name);
       
     // Now, launch the app.
     Intent launch_intent = getPackageManager().getLaunchIntentForPackage(package_name);

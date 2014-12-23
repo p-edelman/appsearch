@@ -11,7 +11,6 @@ import android.app.Activity;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabaseLockedException;
-import android.database.sqlite.SQLiteException;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.ListView;
@@ -40,7 +39,7 @@ public class FindMostUsedThread extends AsyncTask<String, Void, ArrayList<AppDat
       return app_list;
     }
 
-    long time_slot = AppCacheOpenHelper.getTimeSlot();
+    long time_slot = CountAndDecay.getTimeSlot();
     int  day = Calendar.getInstance().get(Calendar.DAY_OF_WEEK);
     String time_slot_str = Long.toString(time_slot);
     String day_str       = Integer.toString(day);

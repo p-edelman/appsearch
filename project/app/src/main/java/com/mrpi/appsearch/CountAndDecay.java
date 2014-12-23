@@ -159,9 +159,9 @@ public class CountAndDecay {
         // Delete all entries that fall below 6 (they cannot decay any further).
         // This happens after a little bit less than a month for an app that hasn't
         // been clicked anymore.
-        db.delete(AppCacheOpenHelper.TBL_USAGE_ALL, "count < 6", null);
+        db.delete(AppCacheOpenHelper.TBL_USAGE_ALL,  "count < 6", null);
         db.delete(AppCacheOpenHelper.TBL_USAGE_WEEK, "count < 6", null);
-        db.delete(AppCacheOpenHelper.TBL_USAGE_DAY, "count < 6", null);
+        db.delete(AppCacheOpenHelper.TBL_USAGE_DAY,  "count < 6", null);
       }
 
       // Write the decay day back to the database.

@@ -77,4 +77,15 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
       Log.d("AppSearch", "Database upgraded to version 2");
     }
   }
+
+  /** Remove an app from the database.
+    * @param package_name the package name of the app to be removed.
+    */
+  public void removePackage(String package_name) {
+    SQLiteDatabase db = getWritableDatabase();
+    String[] where_args = {package_name};
+    db.delete(TBL_USAGE_ALL, "package_name=?", where_args);
+    db.delete(TBL_USAGE_DAY, "package_name=?", where_args);
+    db.delete(TBL_USAGE_WEEK, "package_name=?", where_args);
+  }
 }

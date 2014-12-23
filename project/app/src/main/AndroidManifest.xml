@@ -49,13 +49,10 @@
         </service>
 -->
 
-        <receiver android:name="com.mrpi.appsearch.AppsChangedReceiver" >
+        <receiver android:name=".AppRemovedReceiver" >
             <intent-filter>
-                <action android:name="android.intent.action.PACKAGE_ADDED" />
-                <action android:name="android.intent.action.PACKAGE_CHANGED" />
                 <action android:name="android.intent.action.PACKAGE_REMOVED" />
                 <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
-                <action android:name="android.intent.action.PACKAGE_REPLACED" />
                 <!--
                      The two following lines are necessary to fire the receiver
                      when the app is stopped.

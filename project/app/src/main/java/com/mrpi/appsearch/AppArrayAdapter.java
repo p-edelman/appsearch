@@ -15,6 +15,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.util.Log;
 
 /** Adapter to provide the data of the search results and present it in the
  *  proper way.
@@ -42,22 +43,39 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
    */
   @Override
   public View getView(int position, View convert_view, ViewGroup parent) {
-    AppData app_data = m_app_data.get(position);
-    
+    while (position < m_app_data.size()) {
+      AppData app_data = m_app_data.get(position);
+      View row_view = getViewForReal(app_data, parent);
+      if (row_view != null) {
+        return row_view;
+      } else {
+        // App is not installed anymore
+        AppCacheOpenHelper cache = AppCacheOpenHelper.getInstance(getContext());
+        cache.removePackage(app_data.package_name);
+        m_app_data.remove(position);
+        notifyDataSetChanged();
+      }
+    }
+
+    // Return empty row when one app was removed from the list
+    LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+    return inflater.inflate(R.layout.app_result, parent, false);
+  }
+
+  public View getViewForReal(AppData app_data, ViewGroup parent) {
     // Find the app_result XML resource and extract the views for icon and text
     LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     View row_view = inflater.inflate(R.layout.app_result, parent, false);
     ImageView image_view = (ImageView) row_view.findViewById(R.id.AppIcon);
     TextView text_view   = (TextView)row_view.findViewById(R.id.AppName);
-   
+
     // Set icon
     Drawable icon;
     try {
       icon = m_package_manager.getApplicationIcon(app_data.package_name);
       image_view.setImageDrawable(icon);
     } catch (NameNotFoundException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      return null;
     }
 
     // Set text; make the matching letters underlined and bold
@@ -72,4 +90,5 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
 
     return row_view;
   }
+
 }

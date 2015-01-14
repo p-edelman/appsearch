@@ -82,6 +82,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     * @param package_name the package name of the app to be removed.
     */
   public void removePackage(String package_name) {
+    Log.d("AppSearch", "Removing package \"" + package_name + "\" from caches");
     SQLiteDatabase db = getWritableDatabase();
     String[] where_args = {package_name};
     db.delete(TBL_USAGE_ALL, "package_name=?", where_args);

@@ -191,7 +191,6 @@ public class CountAndDecay {
     if (success) {
       int last_decay = cursor.getInt(0);
       days_to_decay = to_when - last_decay;
-      Log.d("Decay", "Decaying " + days_to_decay + "days");
       if (days_to_decay < 0) {
         // Happy new year!
         Calendar today_date      = Calendar.getInstance();
@@ -201,6 +200,7 @@ public class CountAndDecay {
         long last_decay_ms = last_decay_date.getTimeInMillis();
         days_to_decay = (int) TimeUnit.MILLISECONDS.toDays(today_ms - last_decay_ms);
       }
+      Log.d("Decay", "Decaying " + days_to_decay + " days");
     } else {
       // There wasn't a timestamp in the database, so create one for today
       ContentValues values = new ContentValues();

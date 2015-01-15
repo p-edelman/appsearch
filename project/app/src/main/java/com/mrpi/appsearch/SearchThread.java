@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import android.app.Activity;
 import android.database.Cursor;
@@ -45,35 +43,37 @@ public class SearchThread extends AsyncTask<String, Void, ArrayList<AppData>> {
   protected ArrayList<AppData> doInBackground(String... query_param) {
     final String query = query_param[0].toLowerCase();
     
-    // Construct a regex that can fuzzy match the query to the name of the app
-    String regex = ".*";
-    for (int pos = 0; pos < query.length(); pos++) regex += query.charAt(pos) + ".*";
-    Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+    // Query the database for all app names that have the characters in our
+    // query in the proper order, although not necessary adjacent to each
+    // other.
+    SQLiteDatabase cache = AppCacheOpenHelper.getInstance(m_parent_activity).getReadableDatabase();
+    String db_query = "%";
+    for (int pos = 0; pos < query.length(); pos++) db_query += query.charAt(pos) + "%";
+    Cursor cursor = cache.rawQuery("SELECT DISTINCT public_name, package_name FROM " + AppCacheOpenHelper.TBL_APPS + " WHERE public_name LIKE ?",  new String[]{db_query});
 
-    // Copy all the matching apps to a new list.
-    final ArrayList<AppData> apps     = m_parent_activity.getAppList();
-    final ArrayList<AppData> filtered = new ArrayList<AppData>();
-    int index = 0;
-    while ((index < apps.size()) && !isCancelled()) {
-      AppData app_data = apps.get(index);
-      if (pattern.matcher(app_data.name).matches()) {
-        app_data = getMatchRating(app_data, query);
-        filtered.add(app_data);
-      }
-      index++;
+    // Put the results in a list of AppData.
+    final ArrayList<AppData> app_list = new ArrayList<AppData>();
+    boolean result = cursor.moveToFirst();
+    while (result && !isCancelled()) {
+      AppData app_data = new AppData();
+      app_data.name = cursor.getString(0);
+      app_data = getMatchRating(app_data, query);
+      app_data.package_name = cursor.getString(1);
+      app_list.add(app_data);
+      result = cursor.moveToNext();
     }
-    Log.d("AppSearch", "Found " + filtered.size() + " results");
+    Log.d("AppSearch", "Found " + cursor.getCount() + " results");
 
     // Sort by comparing the ratings
     if (!isCancelled()) {
-      Collections.sort(filtered, new Comparator<Object>() {
+      Collections.sort(app_list, new Comparator<Object>() {
         public int compare(Object obj1, Object obj2) {
           return ((AppData)obj1).match_rating - ((AppData)obj2).match_rating;
         }
       });
     }
 
-    return filtered;
+    return app_list;
   }
 
   /** When done, populate the results list. This is done on the GUI thread,

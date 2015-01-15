@@ -5,7 +5,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
-/** Provider for the app cache database.
+/** Provider for the app database.
  *  <p>
  *  This class is written as a singleton; during the lifecycle of the app only a
  *  single instance exists (accessible by the class method 
@@ -13,6 +13,17 @@ import android.util.Log;
  *  all components and threads.
  *  <p>
  *  Warning: the database connection may <b>never</b> be closed!
+ *  <p>
+ *  There are two classes of tables here. The first is a list of all the
+ *  installed apps. The database uses two tables: a live table called "apps"
+ *  that's ready on application start, and a table called "dirty" that can be
+ *  used to write a new list to in the background. When indexing is complete,
+ *  the method {@link #switchDirty()} makes the "dirty" table the new "apps"
+ *  table and creates a new empty dirty table.
+ *  <p>
+ *  The second class is of tables contain the scores for the apps based on
+ *  their number of launches. There are three tables: for launches on this
+ *  particular time and day, on this particular time, and overall.
  */
 public class AppCacheOpenHelper extends SQLiteOpenHelper {
 
@@ -22,6 +33,11 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   /** Housekeeping parameters */
   private static final int    DB_VERSION = 2;
   private static final String DB_NAME    = "apps.sqlite";
+
+  /** The schema for the table with installed apps. */
+  public static final String TBL_APPS          = "apps";
+  public static final String TBL_APPS_DIRTY    = "dirty";
+  public static final String SCHEMA_INSTALLED  = "(public_name TEXT PRIMARY KEY, package_name TEXT)";
 
   /** The schema for the tables with the app usage. */
   public static final String TBL_USAGE_ALL     = "usage_all";
@@ -52,6 +68,8 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   @Override
   public void onCreate(SQLiteDatabase db) {
     db.beginTransaction();
+    db.execSQL("CREATE TABLE " + TBL_APPS + " " + SCHEMA_INSTALLED + ";");
+    db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");
     db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL);
     db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY);
     db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK);
@@ -66,8 +84,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     Log.d("AppSearch", "New version: " + new_version);
     if ((old_version == 1) && (new_version == 2)) {
       db.beginTransaction();
-      db.execSQL("DROP TABLE apps;");
-      db.execSQL("DROP TABLE dirty;");
       db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL + ";");
       db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY + ";");
       db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK + ";");
@@ -76,6 +92,22 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
       db.endTransaction();
       Log.d("AppSearch", "Database upgraded to version 2");
     }
+  }
+
+  /** After the database has been filled with updated app data, the old "app"
+   *  table is switched out for the new one, and a new empty "dirty" table is
+   *  provided.
+   */
+  public void switchDirty() {
+    Log.d("AppSearch", "Making the switch");
+    SQLiteDatabase db = getWritableDatabase();
+    db.beginTransaction();
+    db.execSQL("DROP TABLE " + TBL_APPS + ";");
+    db.execSQL("ALTER TABLE " + TBL_APPS_DIRTY + " RENAME TO " + TBL_APPS + ";");
+    db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");
+    db.setTransactionSuccessful();
+    db.endTransaction();
+    Log.d("AppSearch", "Switch made");
   }
 
   /** Remove an app from the database.

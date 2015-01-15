@@ -24,12 +24,18 @@ import android.widget.SearchView;
 
 /** The main Activity for the app.
  *  <p>
- *  To make the app speedy and snappy, searching and subsequently formatting the
- *  results is done in a parallel process through {@link SearchThread}. This
- *  prevents the keyboard from blocking when a search is performed. Although
- *  this is quite fast in general, it can sometimes hang when starting up. When
- *  more characters are typed while the current search isn't finished, it is
- *  aborted, further speeding up the search.
+ *  To make the app speedy and snappy, parallelization is employed in two ways.
+ *  The first is for indexing the installed apps. This is delegated to a
+ *  {@link AppIndexService} running in the background. The tradeoff is accuracy:
+ *  while the background service is running (which may take up to tens of
+ *  seconds), the search is performed on a cached index.
+ *  <p>
+ *  Also searching and subsequently formatting the results is done in a parallel
+ *  process through {@link SearchThread}. This prevents the keyboard from
+ *  blocking when a search is performed. Although this is quite fast in general,
+ *  it can sometimes hang when starting up. When more characters are typed while
+ *  the current search isn't finished, it is aborted, further speeding up the
+ *  search.
  */
 public class MainActivity extends Activity {
 
@@ -48,10 +54,6 @@ public class MainActivity extends Activity {
                                             // to let her know something is
                                             // happening.
   private AboutDialog    m_about_dialog;    // The "about" dialog.
-
-  private ArrayList<AppData> m_app_list;    // The list of applications
-                                            // available on the device, that is
-                                            // update on every resume.
 
   private CountAndDecay m_count_decay = null;
 
@@ -112,7 +114,8 @@ public class MainActivity extends Activity {
     m_search_thread.execute("");
 
     // Every time onResume is called, the apps are indexed again.
-    findInstalledApps();
+    Intent app_index_intent = new Intent(this, AppIndexService.class);
+    startService(app_index_intent);
 
     super.onResume();
   }
@@ -123,38 +126,6 @@ public class MainActivity extends Activity {
     //reset();
     Log.d("Status", "App stopped");
     super.onStop();
-  }
-
-  /** Update the list of installed apps on the device.
-   *  <p>
-   *  This list can be retrieved with the {@link #getAppList()} method.
-   */
-  private void findInstalledApps() {
-    final PackageManager pm = getPackageManager();
-    final Intent main_intent = new Intent(Intent.ACTION_MAIN, null);
-    main_intent.addCategory(Intent.CATEGORY_LAUNCHER);
-    final List<ResolveInfo> packages = pm.queryIntentActivities(main_intent, 0);
-
-    final String own_name = getString(R.string.app_name);
-
-    // Index the necessary info for each app
-    m_app_list = new ArrayList<AppData>();
-    for (ResolveInfo resolve_info : packages) {
-      AppData app_data = new AppData();
-      ActivityInfo activity_info = resolve_info.activityInfo;
-      app_data.name          = resolve_info.loadLabel(pm).toString();
-      app_data.package_name  = activity_info.applicationInfo.packageName;
-      if (!app_data.name.equals(own_name)) { // Exclude self from list
-        m_app_list.add(app_data);
-      }
-    };
-    Log.d("AppSearch", "Indexed installed apps");
-  }
-
-  /** Get the list of installed apps on this device (minus this app itself).
-   *  @return a list of {@link AppData} objects of all the installed apps. */
-  public ArrayList<AppData> getAppList() {
-    return m_app_list;
   }
 
   /** Reset the app for a fresh search: clear results list, search box and
@@ -224,8 +195,6 @@ public class MainActivity extends Activity {
       
     // Now, launch the app.
     Intent launch_intent = getPackageManager().getLaunchIntentForPackage(package_name);
-    // TODO: When we're operating on an old cache, an app might be removed
-    // we need to handle that.
     startActivity(launch_intent);
   }
 

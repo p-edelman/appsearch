@@ -44,16 +44,16 @@
                 android:resource="@xml/searchable" />
         </activity>
 
-<!--    TODO: Here comes a database cleanup service
         <service android:name="com.mrpi.appsearch.AppIndexService" >
         </service>
--->
 
-        <receiver android:name=".AppRemovedReceiver" >
+        <receiver android:name=".AppChangedReceiver" >
             <intent-filter>
-                <action android:name="android.intent.action.PACKAGE_REMOVED" />
-                <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
-                <!--
+              <action android:name="android.intent.action.PACKAGE_ADDED" />
+              <action android:name="android.intent.action.PACKAGE_CHANGED" />
+              <action android:name="android.intent.action.PACKAGE_REMOVED" />
+              <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
+              <action android:name="android.intent.action.PACKAGE_REPLACED" />                <!--
                      The two following lines are necessary to fire the receiver
                      when the app is stopped.
                 -->

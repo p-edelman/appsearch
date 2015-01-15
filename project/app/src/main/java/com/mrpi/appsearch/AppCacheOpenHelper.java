@@ -101,7 +101,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   public void switchDirty() {
     Log.d("AppSearch", "Making the switch");
     SQLiteDatabase db = getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     db.execSQL("DROP TABLE " + TBL_APPS + ";");
     db.execSQL("ALTER TABLE " + TBL_APPS_DIRTY + " RENAME TO " + TBL_APPS + ";");
     db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");

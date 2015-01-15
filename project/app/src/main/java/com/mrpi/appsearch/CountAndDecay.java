@@ -149,7 +149,7 @@ public class CountAndDecay {
     if (days_to_decay > 0) {
       Log.d("AppSearch", "Decaying " + days_to_decay + " days");
       SQLiteDatabase db = m_cache.getWritableDatabase();
-      db.beginTransaction();
+      db.beginTransactionNonExclusive();
       for (int day = 0; day < days_to_decay; day++) {
         // Decay all values by 10 percent
         db.execSQL("UPDATE " + AppCacheOpenHelper.TBL_USAGE_ALL  + " SET count = round(count * 0.9)");

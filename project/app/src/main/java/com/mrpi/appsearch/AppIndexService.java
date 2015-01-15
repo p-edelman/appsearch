@@ -59,7 +59,7 @@ public class AppIndexService extends IntentService {
     // search access to the database while indexing.
     AppCacheOpenHelper cache = AppCacheOpenHelper.getInstance(getBaseContext());
     SQLiteDatabase db = cache.getWritableDatabase();
-    db.beginTransaction();
+    db.beginTransactionNonExclusive();
     for (AppData app_data: app_list) {
       ContentValues values = new ContentValues();
       values.put("public_name",  app_data.name);

@@ -7,5 +7,6 @@
     <string name="search_hint">Search your apps</string>
     <string name="launching_app">Launching %s</string>
     <string name="please_wait">Please wait</string>
+    <string name="add_widget">Add widget</string>
 
 </resources>

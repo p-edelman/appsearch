@@ -4,13 +4,16 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:padding="@dimen/widget_margin"
-                    android:background="#ffff00d8">
+                    android:orientation="horizontal"
+                    android:background="#ffff00d4">
 
-  <ListView
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
+  <GridView
+      android:layout_width="fill_parent"
+      android:layout_height="fill_parent"
       android:id="@+id/most_used_widget_list"
-      android:layout_weight="1"
-      android:background="#ff0300ff"/>
+      android:background="#ff0300ff"
+      android:columnWidth="60dp"
+      android:stretchMode="columnWidth"
+      android:numColumns="auto_fit"/>
 
 </LinearLayout>

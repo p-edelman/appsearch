@@ -48,7 +48,8 @@ public class MostUsedWidget extends AppWidgetProvider {
     intent.setData(Uri.parse(intent.toUri(Intent.URI_INTENT_SCHEME)));
 
     // Instantiate the RemoteViews object for the app widget layout.
-    RemoteViews remote_views = new RemoteViews(context.getPackageName(), R.layout.most_used_widget);
+    RemoteViews remote_views = new RemoteViews(context.getPackageName(),
+                                               R.layout.most_used_widget);
 
     // Set up the RemoteViews object to use a RemoteViews adapter.
     // This adapter connects
@@ -60,10 +61,6 @@ public class MostUsedWidget extends AppWidgetProvider {
     // It should be in the same layout used to instantiate the RemoteViews
     // object above.
     //rv.setEmptyView(R.id.stack_view, R.id.empty_view);
-
-    //
-    // Do additional processing specific to this app widget...
-    //
 
     // Instruct the widget manager to update the widget
     widget_manager.updateAppWidget(widget_id, remote_views);

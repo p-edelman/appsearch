@@ -26,39 +26,25 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
+/** The accompanying widget for the search app. It displays the icons for the three most used apps
+ *  for the current time, next to an app to launch te search. */
 public class MostUsedWidget extends AppWidgetProvider {
 
+  /** Intent actions defined within this class. We capture and handle icon clicks within this class,
+   *  and because of the widget architecture this is done by catching Intents. */
   public static String WIDGET_ICON_CLICK = "WIDGET_ICON_CLICK";
   public static String WIDGET_SEARCH     = "WIDGET_SEARCH";
 
+  /** Called by the system each time the widget is updated.
+   *  This method searches for the three top apps and sets the icons of (all) the active widget(s)
+   *  them.
+   *  @param context the application context
+   *  @param widget_manager the active AppWidgetManager
+   *  @param widget_ids a list of all the widget id's. */
   @Override
   public void onUpdate(Context          context,
                        AppWidgetManager widget_manager,
                        int[]            widget_ids) {
-    // There may be multiple widgets active, so update all of them
-    for (int i = 0; i < widget_ids.length; i++) {
-      updateAppWidget(context, widget_manager, widget_ids[i]);
-    }
-    super.onUpdate(context, widget_manager, widget_ids);
-  }
-
-  @Override
-  public void onEnabled(Context context) {
-    // Enter relevant functionality for when the first widget is created
-    super.onEnabled(context);
-  }
-
-  @Override
-  public void onDisabled(Context context) {
-    // Enter relevant functionality for when the last widget is disabled
-    super.onDisabled(context);
-  }
-
-  static void updateAppWidget(Context          context,
-                              AppWidgetManager widget_manager,
-                              int              widget_id) {
-
-    Log.d("AppSearch", "Updating widget " + widget_id);
 
     // Instantiate the RemoteViews object for the app widget layout.
     RemoteViews views = new RemoteViews(context.getPackageName(),
@@ -66,6 +52,12 @@ public class MostUsedWidget extends AppWidgetProvider {
 
     PackageManager package_manager = context.getPackageManager();
 
+    // For responding to touch, we first need to create an internal intent (that is caught by
+    // onReceive). Then we wrap this intent in a PendingIntent, that we can bind to an icon.
+    // Because the intents for all icons look the same (they only differ in the extra data),
+    // Android will reuse the same PendingIntent object each time. Therefore, we need to set a
+    // different request code for all of them AND set the FLAG_UPDATE_CURRENT, which will update the
+    // current PendingIntent with the new intent.
     Intent intent = new Intent(context, MostUsedWidget.class);
     intent.setAction(WIDGET_SEARCH);
     PendingIntent pending_intent = PendingIntent.getBroadcast(context, -1, intent,
@@ -73,37 +65,29 @@ public class MostUsedWidget extends AppWidgetProvider {
     views.setOnClickPendingIntent(R.id.widget_icon_search, pending_intent);
     views.setOnClickPendingIntent(R.id.widget_text_search, pending_intent);
 
-
+    // Get the top apps and set them to the icons
     ArrayList<AppData> apps = getMostUsedApps(context);
-
     int app_num    = 0;
     int drawn_apps = 0;
-    while(app_num < apps.size() && drawn_apps < 3) {
+    while(app_num < apps.size() && drawn_apps < 3) { // Safeguard for when apps from the database are uninstalled in the meantime
       AppData app = apps.get(app_num);
       try {
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
                                                                       PackageManager.GET_META_DATA);
+
+        // Set icon and name
         Resources resources = package_manager.getResourcesForApplication(app_info);
         Bitmap icon         = BitmapFactory.decodeResource(resources, app_info.icon);
-
         int icon_id = context.getResources().getIdentifier("widget_icon_" + drawn_apps, "id", context.getPackageName());
         int text_id = context.getResources().getIdentifier("widget_text_" + drawn_apps, "id", context.getPackageName());
         views.setImageViewBitmap(icon_id, icon);
         views.setTextViewText(text_id, app.name);
 
-        // For responding to touch, we first need to create an intent to ourselves (this very
-        // class), and put the package name in it.
+        // Set intent for when the user clicks
         intent = new Intent(context, MostUsedWidget.class);
         intent.setAction(WIDGET_ICON_CLICK);
         intent.putExtra("name",         app.name);
         intent.putExtra("package_name", app.package_name);
-
-        // Then we wrap the intent in a PendingIntent. Because the Intents look all the same (they
-        // only differ in the extra data), Android will reuse the same PendingIntent object each
-        // time. Therefore, we need to set a different request code different for all of them AND
-        // set the FLAG_UPDATE_CURRENT, which will update the current PendingIntent with the new
-        // Intent.
-        // Finally, we can bind the PendingIntent to the icon.
         pending_intent = PendingIntent.getBroadcast(context, app_num, intent,
                                                     PendingIntent.FLAG_UPDATE_CURRENT);
         views.setOnClickPendingIntent(icon_id, pending_intent);
@@ -111,20 +95,19 @@ public class MostUsedWidget extends AppWidgetProvider {
 
         drawn_apps++;
       } catch (PackageManager.NameNotFoundException e) {
-        // App is not there anymore, silently ignore
+        // App is not there anymore, by silently ignoring this we skip to the next app in the list
       }
       app_num++;
     }
 
-    // The empty view is displayed when the collection has no items.
-    // It should be in the same layout used to instantiate the RemoteViews
-    // object above.
-    //rv.setEmptyView(R.id.stack_view, R.id.empty_view);
-
-    // Instruct the widget manager to update the widget
-    widget_manager.updateAppWidget(widget_id, views);
+    // Update all the widgets with the new view
+    for (int i = 0; i < widget_ids.length; i++) {
+      widget_manager.updateAppWidget(widget_ids[i], views);
+    }
+    super.onUpdate(context, widget_manager, widget_ids);
   }
 
+  /** Retrieve a list with the most used apps from the database. */
   static private ArrayList<AppData> getMostUsedApps(Context context) {
     ArrayList<AppData> apps = new ArrayList<AppData>();
 
@@ -211,27 +194,26 @@ public class MostUsedWidget extends AppWidgetProvider {
     }
   }
 
+  /** We override this method to catch internal intents generated by a click on one of the icons. */
   @Override
   public void onReceive(Context context, Intent intent) {
-    // Handle icon clicks ourselves and send the rest to the super class.
-    if (intent.getAction().equals(WIDGET_ICON_CLICK)) {
+    if (intent.getAction().equals(WIDGET_SEARCH)) {
+      // Open the search app
+      Intent launch_intent = new Intent(context, MainActivity.class);
+      launch_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      context.startActivity(launch_intent);
+    } else if (intent.getAction().equals(WIDGET_ICON_CLICK)) {
+      // One of the app icons was clicked
       final String name         = intent.getStringExtra("name");
       final String package_name = intent.getStringExtra("package_name");
 
-      // Save the launch time slot to the database - if it's not App Search itself
-      if (!package_name.equals(context.getPackageName())) {
-        // TODO: This check should be done on the database level, not here
-        CountAndDecay count_decay = new CountAndDecay(AppCacheOpenHelper.getInstance(context));
-        count_decay.countAppLaunch(name, package_name);
-      }
+      // Save the launch time slot to the database
+      CountAndDecay count_decay = new CountAndDecay(AppCacheOpenHelper.getInstance(context));
+      count_decay.countAppLaunch(name, package_name);
 
       // Now, launch the app.
       Log.d("Widget", "Launching app " + name);
       Intent launch_intent = context.getPackageManager().getLaunchIntentForPackage(package_name);
-      context.startActivity(launch_intent);
-    } else if (intent.getAction().equals(WIDGET_SEARCH)) {
-      Intent launch_intent = new Intent(context, MainActivity.class);
-      launch_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
       context.startActivity(launch_intent);
     } else {
       super.onReceive(context, intent);

@@ -1,5 +1,6 @@
 package com.mrpi.appsearch;
 
+import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
@@ -15,6 +16,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.AdapterView;
 import android.widget.RemoteViews;
 
 import java.util.ArrayList;
@@ -72,10 +74,29 @@ public class MostUsedWidget extends AppWidgetProvider {
                                                                       PackageManager.GET_META_DATA);
         Resources resources = package_manager.getResourcesForApplication(app_info);
         Bitmap icon         = BitmapFactory.decodeResource(resources, app_info.icon);
+
         int icon_id = context.getResources().getIdentifier("widget_icon_" + drawn_apps, "id", context.getPackageName());
         int text_id = context.getResources().getIdentifier("widget_text_" + drawn_apps, "id", context.getPackageName());
         views.setImageViewBitmap(icon_id, icon);
         views.setTextViewText(text_id, app.name);
+
+        // For responding to touch, we first need to create an intent to ourselves (this very
+        // class), and put the package name in it.
+        Intent main_activity_intent = new Intent(context, MostUsedWidget.class);
+        main_activity_intent.setAction("TEST");
+        main_activity_intent.putExtra("package_name", app.package_name);
+        //main_activity_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        // Then we wrap the intent in a PendingIntent. Because the Intents look all the same (they
+        // only differ in the extra data), Android will reuse the same PendingIntent object each
+        // time. Therefore, we need to set a different request code different for all of them AND
+        // set the FLAG_UPDATE_CURRENT, which will update the current PendingIntent with the new
+        // Intent.
+        // Finally, we can bind the PendingIntent to the icon.
+        PendingIntent pending_intent = PendingIntent.getBroadcast(context, app_num, main_activity_intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        views.setOnClickPendingIntent(icon_id, pending_intent);
+        views.setOnClickPendingIntent(text_id, pending_intent);
+
         drawn_apps++;
       } catch (PackageManager.NameNotFoundException e) {
         // App is not there anymore, silently ignore
@@ -177,6 +198,20 @@ public class MostUsedWidget extends AppWidgetProvider {
       result = cursor.moveToNext();
     }
   }
+
+  @Override
+  public void onReceive(Context context, Intent intent) {
+    // Handle icon clicks ourselves (here denoted by "TEST") and send the rest to the super class.
+    if (intent.getAction().equals("TEST")) {
+      final String package_name = intent.getStringExtra("package_name");
+      Log.d("Widget", "Launching app " + package_name);
+      Intent launch_intent = context.getPackageManager().getLaunchIntentForPackage(package_name);
+      context.startActivity(launch_intent);
+    } else {
+      super.onReceive(context, intent);
+    }
+  }
+
 }
 
 

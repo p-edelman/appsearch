@@ -28,6 +28,9 @@ import java.util.Map;
 
 public class MostUsedWidget extends AppWidgetProvider {
 
+  public static String WIDGET_ICON_CLICK = "WIDGET_ICON_CLICK";
+  public static String WIDGET_SEARCH     = "WIDGET_SEARCH";
+
   @Override
   public void onUpdate(Context          context,
                        AppWidgetManager widget_manager,
@@ -63,11 +66,19 @@ public class MostUsedWidget extends AppWidgetProvider {
 
     PackageManager package_manager = context.getPackageManager();
 
+    Intent intent = new Intent(context, MostUsedWidget.class);
+    intent.setAction(WIDGET_SEARCH);
+    PendingIntent pending_intent = PendingIntent.getBroadcast(context, -1, intent,
+                                                              PendingIntent.FLAG_UPDATE_CURRENT);
+    views.setOnClickPendingIntent(R.id.widget_icon_search, pending_intent);
+    views.setOnClickPendingIntent(R.id.widget_text_search, pending_intent);
+
+
     ArrayList<AppData> apps = getMostUsedApps(context);
 
     int app_num    = 0;
     int drawn_apps = 0;
-    while(app_num < apps.size() && drawn_apps < 4) {
+    while(app_num < apps.size() && drawn_apps < 3) {
       AppData app = apps.get(app_num);
       try {
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
@@ -82,10 +93,10 @@ public class MostUsedWidget extends AppWidgetProvider {
 
         // For responding to touch, we first need to create an intent to ourselves (this very
         // class), and put the package name in it.
-        Intent main_activity_intent = new Intent(context, MostUsedWidget.class);
-        main_activity_intent.setAction("TEST");
-        main_activity_intent.putExtra("package_name", app.package_name);
-        //main_activity_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent = new Intent(context, MostUsedWidget.class);
+        intent.setAction(WIDGET_ICON_CLICK);
+        intent.putExtra("name",         app.name);
+        intent.putExtra("package_name", app.package_name);
 
         // Then we wrap the intent in a PendingIntent. Because the Intents look all the same (they
         // only differ in the extra data), Android will reuse the same PendingIntent object each
@@ -93,7 +104,8 @@ public class MostUsedWidget extends AppWidgetProvider {
         // set the FLAG_UPDATE_CURRENT, which will update the current PendingIntent with the new
         // Intent.
         // Finally, we can bind the PendingIntent to the icon.
-        PendingIntent pending_intent = PendingIntent.getBroadcast(context, app_num, main_activity_intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        pending_intent = PendingIntent.getBroadcast(context, app_num, intent,
+                                                    PendingIntent.FLAG_UPDATE_CURRENT);
         views.setOnClickPendingIntent(icon_id, pending_intent);
         views.setOnClickPendingIntent(text_id, pending_intent);
 
@@ -201,11 +213,25 @@ public class MostUsedWidget extends AppWidgetProvider {
 
   @Override
   public void onReceive(Context context, Intent intent) {
-    // Handle icon clicks ourselves (here denoted by "TEST") and send the rest to the super class.
-    if (intent.getAction().equals("TEST")) {
+    // Handle icon clicks ourselves and send the rest to the super class.
+    if (intent.getAction().equals(WIDGET_ICON_CLICK)) {
+      final String name         = intent.getStringExtra("name");
       final String package_name = intent.getStringExtra("package_name");
-      Log.d("Widget", "Launching app " + package_name);
+
+      // Save the launch time slot to the database - if it's not App Search itself
+      if (!package_name.equals(context.getPackageName())) {
+        // TODO: This check should be done on the database level, not here
+        CountAndDecay count_decay = new CountAndDecay(AppCacheOpenHelper.getInstance(context));
+        count_decay.countAppLaunch(name, package_name);
+      }
+
+      // Now, launch the app.
+      Log.d("Widget", "Launching app " + name);
       Intent launch_intent = context.getPackageManager().getLaunchIntentForPackage(package_name);
+      context.startActivity(launch_intent);
+    } else if (intent.getAction().equals(WIDGET_SEARCH)) {
+      Intent launch_intent = new Intent(context, MainActivity.class);
+      launch_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
       context.startActivity(launch_intent);
     } else {
       super.onReceive(context, intent);

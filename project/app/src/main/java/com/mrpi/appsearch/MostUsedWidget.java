@@ -1,8 +1,10 @@
 package com.mrpi.appsearch;
 
+import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -26,18 +28,24 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
-/** The accompanying widget for the search app. It displays the icons for the three most used apps
- *  for the current time, next to an app to launch te search. */
+/** The accompanying widget for the search app. It displays the icons for the
+ *  three most used apps for the current time, next to an app to launch the
+ *  search.
+ *  Most widget events are broadcasted as intents. This class catches these
+ *  intents and handles them by itself. */
 public class MostUsedWidget extends AppWidgetProvider {
 
-  /** Intent actions defined within this class. We capture and handle icon clicks within this class,
-   *  and because of the widget architecture this is done by catching Intents. */
-  public static String WIDGET_ICON_CLICK = "WIDGET_ICON_CLICK";
-  public static String WIDGET_SEARCH     = "WIDGET_SEARCH";
+  /** Intent actions defined within this class. Because of the widget
+   *  architecture in Android, interacting with the widget is done via intents.
+   *  We capture and handle them directly within this class. */
+  public static String ACTION_WIDGET_ICON_CLICK = "ACTION_WIDGET_ICON_CLICK";
+  public static String ACTION_WIDGET_SEARCH     = "ACTION_WIDGET_SEARCH";
+  public static String ACTION_WIDGET_UPDATE     = "ACTION_WIDGET_UPDATE";
 
-  /** Called by the system each time the widget is updated.
-   *  This method searches for the three top apps and sets the icons of (all) the active widget(s)
-   *  them.
+  /** Called by the system each time the widget is updated. This actually
+   *  happens only once, the very first time the widget is instantiated. From
+   *  this time on, an AlarmManager runs to update the widget every five
+   *  minutes.
    *  @param context the application context
    *  @param widget_manager the active AppWidgetManager
    *  @param widget_ids a list of all the widget id's. */
@@ -45,6 +53,16 @@ public class MostUsedWidget extends AppWidgetProvider {
   public void onUpdate(Context          context,
                        AppWidgetManager widget_manager,
                        int[]            widget_ids) {
+    updateWidget(context);
+    super.onUpdate(context, widget_manager, widget_ids);
+  }
+
+  /** Update the widget display.
+   *  This method searches for the three top apps and sets the icons of (all)
+   *  the active widget(s) them.
+   *  @param context the applciation context for this widget */
+  private void updateWidget(Context context) {
+    Log.d("Widget", "Updating app widget");
 
     // Instantiate the RemoteViews object for the app widget layout.
     RemoteViews views = new RemoteViews(context.getPackageName(),
@@ -52,14 +70,16 @@ public class MostUsedWidget extends AppWidgetProvider {
 
     PackageManager package_manager = context.getPackageManager();
 
-    // For responding to touch, we first need to create an internal intent (that is caught by
-    // onReceive). Then we wrap this intent in a PendingIntent, that we can bind to an icon.
-    // Because the intents for all icons look the same (they only differ in the extra data),
-    // Android will reuse the same PendingIntent object each time. Therefore, we need to set a
-    // different request code for all of them AND set the FLAG_UPDATE_CURRENT, which will update the
-    // current PendingIntent with the new intent.
+    // For responding to touch, we first need to create an internal intent (that
+    // can be caught by onReceive()). Then we wrap this intent in a
+    // PendingIntent, that we can bind to an icon.
+    // Because the intents for all icons look the same (they only differ in the
+    // extra data), Android will not create a new PendingIntent object for each
+    // icon. Therefore, we need to set a different request code for all of them
+    // AND set the FLAG_UPDATE_CURRENT, which will update the current
+    // PendingIntent with the new intent.
     Intent intent = new Intent(context, MostUsedWidget.class);
-    intent.setAction(WIDGET_SEARCH);
+    intent.setAction(ACTION_WIDGET_SEARCH);
     PendingIntent pending_intent = PendingIntent.getBroadcast(context, -1, intent,
                                                               PendingIntent.FLAG_UPDATE_CURRENT);
     views.setOnClickPendingIntent(R.id.widget_icon_search, pending_intent);
@@ -85,7 +105,7 @@ public class MostUsedWidget extends AppWidgetProvider {
 
         // Set intent for when the user clicks
         intent = new Intent(context, MostUsedWidget.class);
-        intent.setAction(WIDGET_ICON_CLICK);
+        intent.setAction(ACTION_WIDGET_ICON_CLICK);
         intent.putExtra("name",         app.name);
         intent.putExtra("package_name", app.package_name);
         pending_intent = PendingIntent.getBroadcast(context, app_num, intent,
@@ -95,16 +115,55 @@ public class MostUsedWidget extends AppWidgetProvider {
 
         drawn_apps++;
       } catch (PackageManager.NameNotFoundException e) {
-        // App is not there anymore, by silently ignoring this we skip to the next app in the list
+        // App is not there anymore, by silently ignoring this we skip to the
+        // next app in the list
       }
       app_num++;
     }
 
     // Update all the widgets with the new view
-    for (int i = 0; i < widget_ids.length; i++) {
-      widget_manager.updateAppWidget(widget_ids[i], views);
-    }
-    super.onUpdate(context, widget_manager, widget_ids);
+    ComponentName widget_id = new ComponentName(context, MostUsedWidget.class);
+    AppWidgetManager manager = AppWidgetManager.getInstance(context);
+    manager.updateAppWidget(widget_id, views);
+  }
+
+  /** Called when the first widget is installed.
+   *  This method sets an AlarmManager to fire at (1 second past) the start of
+   *  every 5 minute slot (that is also used for scoring app relevance) to
+   *  update all active widgets. */
+  @Override
+  public void onEnabled(Context context) {
+    super.onEnabled(context);
+
+    // Prepare an update intent to fire every five minutes to this class.
+    Intent intent = new Intent(context, MostUsedWidget.class);
+    intent.setAction(ACTION_WIDGET_UPDATE);
+    PendingIntent pending_intent = PendingIntent.getBroadcast(context, 0, intent, 0);
+
+    // Construct the first time when the first update should fire, thus the next
+    // start of a time slot.
+    Calendar time = Calendar.getInstance();
+    int minutes = time.get(Calendar.MINUTE);
+    int minute_slot = minutes / 5;
+    int minutes_diff = ((minute_slot + 1) * 5) - minutes;
+    time.add(Calendar.MINUTE, minutes_diff);
+    time.set(Calendar.SECOND, 1);
+    time.set(Calendar.MILLISECOND, 0);
+
+    // Now set the alarmmanager to reapeat every five minutes.
+    AlarmManager alarm_manager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+    alarm_manager.setRepeating(AlarmManager.RTC, time.getTimeInMillis(), 5 * 60 * 1000, pending_intent);
+  }
+
+  /** Called when all widgets are removed. This method cancels the running
+   *  AlarmManager. */
+  @Override
+  public void onDisabled(Context context) {
+    Intent intent                = new Intent(context, MostUsedWidget.class);
+    PendingIntent pending_intent = PendingIntent.getBroadcast(context, 0, intent, 0);
+    AlarmManager alarm_manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+    alarm_manager.cancel(pending_intent);
+    super.onDisabled(context);
   }
 
   /** Retrieve a list with the most used apps from the database. */
@@ -194,17 +253,20 @@ public class MostUsedWidget extends AppWidgetProvider {
     }
   }
 
-  /** We override this method to catch internal intents generated by a click on one of the icons. */
+  /** Handle intents to this class.
+   *  The AppWidgetProvider base class uses thus mechanism quite extensively, so
+   *  we filter out only the relevant intents and call through to the base class
+   *  for the rest. */
   @Override
   public void onReceive(Context context, Intent intent) {
-    if (intent.getAction().equals(WIDGET_SEARCH)) {
+    if (intent.getAction().equals(ACTION_WIDGET_SEARCH)) {
       // Open the search app
       Intent launch_intent = new Intent(context, MainActivity.class);
       launch_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
       context.startActivity(launch_intent);
-    } else if (intent.getAction().equals(WIDGET_ICON_CLICK)) {
+    } else if (intent.getAction().equals(ACTION_WIDGET_ICON_CLICK)) {
       // One of the app icons was clicked
-      final String name         = intent.getStringExtra("name");
+      final String name = intent.getStringExtra("name");
       final String package_name = intent.getStringExtra("package_name");
 
       // Save the launch time slot to the database
@@ -215,6 +277,9 @@ public class MostUsedWidget extends AppWidgetProvider {
       Log.d("Widget", "Launching app " + name);
       Intent launch_intent = context.getPackageManager().getLaunchIntentForPackage(package_name);
       context.startActivity(launch_intent);
+    } else if (intent.getAction().equals(ACTION_WIDGET_UPDATE)) {
+      Log.d("Widget", "Received an alarm schedule to update");
+      updateWidget(context);
     } else {
       super.onReceive(context, intent);
     }

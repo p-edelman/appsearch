@@ -50,10 +50,6 @@
         <service android:name=".AppIndexService" >
         </service>
 
-        <service android:name=".MostUsedWidgetService"
-                 android:permission="android.permission.BIND_REMOTEVIEWS">
-        </service>
-
         <receiver android:name=".AppChangedReceiver" >
             <intent-filter>
                 <action android:name="android.intent.action.PACKAGE_ADDED" />

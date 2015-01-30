@@ -44,6 +44,7 @@
         android:layout_height="@android:dimen/app_icon_size"
         android:id="@+id/widget_icon_0"
         android:layout_gravity="center_horizontal"
+        android:scaleType="fitXY"
         android:background="?android:selectableItemBackground" />
 
     <TextView
@@ -66,6 +67,7 @@
         android:layout_height="@android:dimen/app_icon_size"
         android:id="@+id/widget_icon_1"
         android:layout_gravity="center_horizontal"
+        android:scaleType="fitXY"
         android:background="?android:selectableItemBackground" />
 
     <TextView
@@ -88,6 +90,7 @@
         android:layout_height="@android:dimen/app_icon_size"
         android:id="@+id/widget_icon_2"
         android:layout_gravity="center_horizontal"
+        android:scaleType="fitXY"
         android:background="?android:selectableItemBackground" />
 
     <TextView

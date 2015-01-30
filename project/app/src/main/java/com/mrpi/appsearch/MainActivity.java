@@ -108,10 +108,11 @@ public class MainActivity extends Activity {
     reset();
     Log.d("Status", "App restarted");
 
-    // Populate the display with the most used apps
-    Log.d("AppSearch", "Looking for most used apps");
-    m_search_thread = new FindMostUsedThread(this);
-    m_search_thread.execute("");
+    // Clear the results list
+    AppArrayAdapter adapter = (AppArrayAdapter)m_results_view.getAdapter();
+    if (adapter != null) {
+      adapter.clear();
+    }
 
     // Every time onResume is called, the apps are indexed again.
     Intent app_index_intent = new Intent(this, AppIndexService.class);
@@ -161,14 +162,12 @@ public class MainActivity extends Activity {
       m_search_thread = new SearchThread(this);
       m_search_thread.execute(query);
     } else {
-      // If the user clears the view, we display the default list of most wanted
-      // applications.
-      Log.d("AppSearch", "Looking for most used apps");
-      if (m_search_thread != null) {
-        m_search_thread.cancel(true);
+      // If the user clears the view, we don't clean up the list of results but
+      // we remove the highlighting of the matched letters.
+      AppArrayAdapter adapter = ((AppArrayAdapter)m_results_view.getAdapter());
+      if (adapter != null) {
+        adapter.renderClear();
       }
-      m_search_thread = new FindMostUsedThread(this);
-      m_search_thread.execute(query);
     }
   }
   

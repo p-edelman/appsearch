@@ -235,20 +235,20 @@ public class MostUsedWidget extends AppWidgetProvider {
   static void convertCursorToAppData(Cursor cursor, Map<String, AppData> app_map) {
     boolean result = cursor.moveToFirst();
     while (result) {
-      String app_name = cursor.getString(0);
-      AppData app_data = app_map.get(app_name);
+      String package_name = cursor.getString(1);
+      AppData app_data = app_map.get(package_name);
       if (app_data == null) {
         app_data = new AppData();
-        app_data.name         = app_name;
-        app_data.package_name = cursor.getString(1);
+        app_data.name         = cursor.getString(0);
+        app_data.package_name = package_name;
         app_data.match_rating = cursor.getInt(2);
-        app_map.put(app_name, app_data);
+        app_map.put(package_name, app_data);
       } else {
         if (cursor.getInt(2) > app_data.match_rating) {
           app_data.match_rating = cursor.getInt(2);
         }
       }
-      Log.d("SearchWidget", "Rating for " + app_name + " is " + app_data.match_rating);
+      Log.d("SearchWidget", "Rating for " + app_data.name + " is " + app_data.match_rating);
       result = cursor.moveToNext();
     }
   }

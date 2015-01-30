@@ -37,18 +37,18 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   /** The schema for the table with installed apps. */
   public static final String TBL_APPS          = "apps";
   public static final String TBL_APPS_DIRTY    = "dirty";
-  public static final String SCHEMA_INSTALLED  = "(public_name TEXT PRIMARY KEY, package_name TEXT)";
+  public static final String SCHEMA_INSTALLED  = "(package_name TEXT PRIMARY KEY, public_name TEXT)";
 
   /** The schema for the tables with the app usage. */
   public static final String TBL_USAGE_ALL     = "usage_all";
   public static final String TBL_USAGE_DAY     = "usage_day";
   public static final String TBL_USAGE_WEEK    = "usage_week";
   private static final String SCHEMA_USAGE_ALL  =
-    "(public_name TEXT, package_name TEXT, count INTEGER, PRIMARY KEY (public_name))";
+    "(public_name TEXT, package_name TEXT, count INTEGER, PRIMARY KEY (package_name))";
   private static final String SCHEMA_USAGE_DAY  =
-    "(public_name TEXT, package_name TEXT, time_slot INTEGER, count INTEGER, PRIMARY KEY (public_name, time_slot))";
+    "(public_name TEXT, package_name TEXT, time_slot INTEGER, count INTEGER, PRIMARY KEY (package_name, time_slot))";
   private static final String SCHEMA_USAGE_WEEK =
-    "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER, PRIMARY KEY (public_name, day, time_slot))";
+    "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER, PRIMARY KEY (package_name, day, time_slot))";
 
   /** The metadata table is a simple text key/numeric value storage. */
   private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";

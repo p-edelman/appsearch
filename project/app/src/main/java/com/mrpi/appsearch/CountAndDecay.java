@@ -16,14 +16,12 @@ import java.util.concurrent.TimeUnit;
  *  (fractional) decay, scores cannot grow too large and app opening that are no
  *  longer refreshed get flushed out of the database fairly quickly.
  *  <p>
- *  The score is kept for three different situations: the score for this time
- *  on the day of the week, the score for this time/day combination, and the
- *  score regardless of time and day. These scores are kept in three different
- *  database tabels. The values are chosen such that an app opening for this
- *  time and day is weighted heaviest, then an opening for this time and then an
- *  opening overall. Approximately, two consecutive openings of an app on a
- *  given day and time outweigh five openings on that time only, and only ten
- *  overall openings outweigh that.
+ *  The score is kept for two different situations: the score for this time
+ *  on the day of the week and the score regardless of time and day.
+ *  These scores are kept in two different database tables. The values are
+ *  chosen such that an app opening for this time and day is weighted heavier
+ *  than an opening overall. Approximately, two consecutive openings of an app
+ *  on a given day and time outweigh fifty overall openings.
  *  <p>
  *  Time is counted in five minute slots over the day, which can be retrieved
  *  with {@link #getTimeSlot()}. An app launch is thus logged in five minute
@@ -84,17 +82,6 @@ public class CountAndDecay {
     all_statement.bindLong(4, SCORE_ALL);
     all_statement.executeInsert();
 
-    // The SQL statement for the daily usage field
-    SQLiteStatement day_statement = db.compileStatement(
-      "REPLACE INTO " + AppCacheOpenHelper.TBL_USAGE_DAY + " (public_name, package_name, time_slot, count) VALUES (" +
-        "?, ?, ?, " +
-        "COALESCE((" +
-          "SELECT count FROM " + AppCacheOpenHelper.TBL_USAGE_DAY + " WHERE public_name=? AND time_slot=?" +
-        "), 0) + ?)");
-    day_statement.bindString(1, public_name);
-    day_statement.bindString(2, package_name);
-    day_statement.bindString(4, public_name);
-
     // The SQL statement for the weekly usage field
     SQLiteStatement week_statement = db.compileStatement(
       "REPLACE INTO " + AppCacheOpenHelper.TBL_USAGE_WEEK + " (public_name, package_name, time_slot, day, count) VALUES (" +
@@ -123,8 +110,6 @@ public class CountAndDecay {
         day -= 1;
         if (day == -1) day = 6;
       }
-      day_statement.bindLong(3, tmp_slot);
-      day_statement.bindLong(5, tmp_slot);
       week_statement.bindLong(3, tmp_slot);
       week_statement.bindLong(4, day);
       week_statement.bindLong(6, tmp_slot);
@@ -132,8 +117,6 @@ public class CountAndDecay {
 
       // Insert progressively smaller bonuses the further away we are from the
       // time slot
-      day_statement.bindLong(6, SCORE_DAY - ((Math.abs(adjacent) * 5)));
-      day_statement.executeInsert();
       week_statement.bindLong(8, SCORE_WEEK - ((Math.abs(adjacent) * 5)));
       week_statement.executeInsert();
 
@@ -167,14 +150,12 @@ public class CountAndDecay {
         // Decay all values by 10 percent
         db.execSQL("UPDATE " + AppCacheOpenHelper.TBL_USAGE_ALL  + " SET count = round(count * 0.9)");
         db.execSQL("UPDATE " + AppCacheOpenHelper.TBL_USAGE_WEEK + " SET count = round(count * 0.9)");
-        db.execSQL("UPDATE " + AppCacheOpenHelper.TBL_USAGE_DAY  + " SET count = round(count * 0.9)");
 
         // Delete all entries that fall below 6 (they cannot decay any further).
         // This happens after a little bit less than a month for an app that hasn't
         // been clicked anymore.
         db.delete(AppCacheOpenHelper.TBL_USAGE_ALL,  "count < 6", null);
         db.delete(AppCacheOpenHelper.TBL_USAGE_WEEK, "count < 6", null);
-        db.delete(AppCacheOpenHelper.TBL_USAGE_DAY,  "count < 6", null);
       }
 
       // Write the decay day back to the database.

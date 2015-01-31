@@ -199,17 +199,6 @@ public class MostUsedWidget extends AppWidgetProvider {
       Log.d("MostUsed", "Got results for time and day");
       cursor.close();
 
-      // Get the top eight apps for this time slot only
-      cursor = db.query(AppCacheOpenHelper.TBL_USAGE_DAY,
-              new String[]{"public_name", "package_name", "count"},
-              "time_slot=?",
-              new String[]{time_slot_str},
-              null, null,
-              "count DESC", "8");
-      convertCursorToAppData(cursor, app_map);
-      Log.d("MostUsed", "Got results for time");
-      cursor.close();
-
       // Get the top eight apps overall
       cursor = db.query(AppCacheOpenHelper.TBL_USAGE_ALL,
               new String[]{"public_name", "package_name", "count"},

@@ -41,12 +41,9 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
 
   /** The schema for the tables with the app usage. */
   public static final String TBL_USAGE_ALL     = "usage_all";
-  public static final String TBL_USAGE_DAY     = "usage_day";
   public static final String TBL_USAGE_WEEK    = "usage_week";
   private static final String SCHEMA_USAGE_ALL  =
     "(public_name TEXT, package_name TEXT, count INTEGER, PRIMARY KEY (package_name))";
-  private static final String SCHEMA_USAGE_DAY  =
-    "(public_name TEXT, package_name TEXT, time_slot INTEGER, count INTEGER, PRIMARY KEY (package_name, time_slot))";
   private static final String SCHEMA_USAGE_WEEK =
     "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER, PRIMARY KEY (package_name, day, time_slot))";
 
@@ -76,7 +73,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     db.execSQL("CREATE TABLE " + TBL_APPS + " " + SCHEMA_INSTALLED + ";");
     db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");
     db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL);
-    db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY);
     db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK);
     db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
     db.execSQL("CREATE TABLE " + TBL_RAW_DATA + " " + SCHEMA_RAW_DATA);
@@ -91,7 +87,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     if ((old_version == 1) && (new_version == 2)) {
       db.beginTransaction();
       db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL + ";");
-      db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY + ";");
       db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK + ";");
       db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
       db.setTransactionSuccessful();
@@ -124,7 +119,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     SQLiteDatabase db = getWritableDatabase();
     String[] where_args = {package_name};
     db.delete(TBL_USAGE_ALL, "package_name=?", where_args);
-    db.delete(TBL_USAGE_DAY, "package_name=?", where_args);
     db.delete(TBL_USAGE_WEEK, "package_name=?", where_args);
   }
 }

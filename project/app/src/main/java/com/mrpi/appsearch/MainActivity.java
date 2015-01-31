@@ -1,5 +1,13 @@
 package com.mrpi.appsearch;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +20,7 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -57,6 +66,8 @@ public class MainActivity extends Activity {
 
   private CountAndDecay m_count_decay = null;
 
+  private final static String SECRET_SEND_DATA = "send database";
+
   @Override
   protected void onCreate(Bundle saved_instance) {
     super.onCreate(saved_instance);
@@ -79,7 +90,11 @@ public class MainActivity extends Activity {
 
       @Override
       public boolean onQueryTextSubmit(String query) {
-        doSearch(query);
+        if (query.equals(SECRET_SEND_DATA)) {
+          sendUsageData();
+        } else {
+          doSearch(query);
+        }
         return true;
       }
     };
@@ -154,7 +169,7 @@ public class MainActivity extends Activity {
    *  If a search was still running, it is cancelled.
    *  @param query the list of characters to search for in an app name.
    */
-  private void doSearch(final String query) {  
+  private void doSearch(final String query) {
     if (query.length() > 0) {
       if (m_search_thread != null) {
         m_search_thread.cancel(true);
@@ -215,5 +230,49 @@ public class MainActivity extends Activity {
       return true;
     }
     return super.onOptionsItemSelected(item);
+  }
+
+  private void sendUsageData() {
+    boolean file_copied = false;
+    File external_file = new File(getExternalCacheDir().toString(), "apps.sqlite");
+    if (external_file.exists()) {
+      external_file.delete();
+    }
+
+    // Copy the db to a readable location
+    InputStream  is = null;
+    OutputStream os = null;
+    try {
+      external_file.createNewFile();
+      AppCacheOpenHelper cache = AppCacheOpenHelper.getInstance(this);
+      is = new FileInputStream(cache.getReadableDatabase().getPath());
+      os = new FileOutputStream(external_file);
+      // Transfer bytes from in to out
+      byte[] buf = new byte[1024];
+      int len;
+      while ((len = is.read(buf)) > 0) {
+        os.write(buf, 0, len);
+      }
+      is.close();
+      os.close();
+      file_copied = true;
+    } catch (IOException e) {
+    }
+
+    if (file_copied) {
+      // Create the intent
+      Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+      intent.setType("*/*");
+      intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "AppSearch database");
+
+      // Attach the file to the intent
+      Uri db_uri = Uri.fromFile(external_file);
+      intent.putExtra(android.content.Intent.EXTRA_STREAM, db_uri);
+
+      // Run the intent
+      startActivity(Intent.createChooser(intent, "Share via"));
+    } else {
+      Log.e("AppSearch", "Couldn't copy the database file");
+    }
   }
 }

@@ -67,6 +67,9 @@ public class CountAndDecay {
     // Perform a decay step if needed
     decay();
 
+    // Register the raw usage
+    registerRaw(public_name, package_name);
+
     // Update the overall table
     SQLiteDatabase db = m_cache.getWritableDatabase();
     SQLiteStatement all_statement = db.compileStatement(
@@ -137,6 +140,16 @@ public class CountAndDecay {
       adjacent--;
     }
     Log.d("AppSearch", "Logged the launch");
+  }
+
+  /** Register the app launch in the raw table, thus an app launch at a single
+   *  datetime. */
+  private void registerRaw(String public_name, String package_name) {
+    SQLiteDatabase db = m_cache.getWritableDatabase();
+    ContentValues values = new ContentValues();
+    values.put("public_name", public_name);
+    values.put("package_name", package_name);
+    db.insert(AppCacheOpenHelper.TBL_RAW_DATA, null, values);
   }
 
   /** Decay the click counts in the database for the number of days since the

@@ -50,6 +50,11 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   private static final String SCHEMA_USAGE_WEEK =
     "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER, PRIMARY KEY (package_name, day, time_slot))";
 
+  /** Collect raw usage data. */
+  public static final String TBL_RAW_DATA = "usage_raw";
+  private final static String SCHEMA_RAW_DATA =
+    "(public_name TEXT, package_name TEXT, date DATETIME DEFAULT (datetime('now','localtime')))";
+
   /** The metadata table is a simple text key/numeric value storage. */
   private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";
 
@@ -74,6 +79,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     db.execSQL("CREATE TABLE " + TBL_USAGE_DAY + " " + SCHEMA_USAGE_DAY);
     db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK);
     db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
+    db.execSQL("CREATE TABLE " + TBL_RAW_DATA + " " + SCHEMA_RAW_DATA);
     db.setTransactionSuccessful();
     db.endTransaction();
     Log.d("AppSearch", "Database initialized");

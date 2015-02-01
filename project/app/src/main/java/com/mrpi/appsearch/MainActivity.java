@@ -1,7 +1,6 @@
 package com.mrpi.appsearch;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import android.app.Activity;
 import android.app.FragmentManager;
@@ -9,9 +8,6 @@ import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -37,13 +33,15 @@ import android.widget.SearchView;
  *  the current search isn't finished, it is aborted, further speeding up the
  *  search.
  */
-public class MainActivity extends Activity {
+public class MainActivity
+        extends Activity
+        implements SearchThreadListener {
 
   // Class variables
   private SearchView     m_search_view;     // The GUI SearchView element
   private ListView       m_results_view;    // The GUI ListView to present the
                                             // results of the search.
-  private AsyncTask<String, Void, ArrayList<AppData>> m_search_thread;
+  private AsyncTask<Object, Void, ArrayList<AppData>> m_search_thread;
                                             // The background thread to perform
                                             // the search. It is needed to keep
                                             // this instance so it can be
@@ -114,6 +112,14 @@ public class MainActivity extends Activity {
       adapter.clear();
     }
 
+    String starting_action = getIntent().getAction();
+    if (starting_action != null &&
+            (starting_action.equals(Intent.ACTION_MAIN) ||
+                    starting_action.equals(Intent.ACTION_ASSIST))) {
+      m_search_thread = new FindMostUsedThread(this, this);
+      m_search_thread.execute();
+    }
+
     // Every time onResume is called, the apps are indexed again.
     Intent app_index_intent = new Intent(this, AppIndexService.class);
     startService(app_index_intent);
@@ -159,7 +165,7 @@ public class MainActivity extends Activity {
       if (m_search_thread != null) {
         m_search_thread.cancel(true);
       }
-      m_search_thread = new SearchThread(this);
+      m_search_thread = new SearchThread(this, this);
       m_search_thread.execute(query);
     } else {
       // If the user clears the view, we don't clean up the list of results but
@@ -215,5 +221,19 @@ public class MainActivity extends Activity {
       return true;
     }
     return super.onOptionsItemSelected(item);
+  }
+
+  /** We need to find out how the activity was brought to the foreground; by
+   *  the widget or by a launcher/search button. So we need to set the starting
+   *  intent to the intent that brought it to the foreground. */
+  @Override
+  protected void onNewIntent(Intent new_intent) {
+    setIntent(new_intent);
+  }
+
+  public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
+    AppArrayAdapter adapter = new AppArrayAdapter(this, R.id.resultsListView, apps);
+    ListView results_list_view = (ListView)findViewById(R.id.resultsListView);
+    results_list_view.setAdapter(adapter);
   }
 }

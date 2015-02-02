@@ -45,10 +45,9 @@ public class AppIndexService extends IntentService {
     String own_name = getString(R.string.app_name);
     ArrayList<AppData> app_list = new ArrayList<AppData>();
     for (ResolveInfo resolve_info : packages) {
-      AppData app_data = new AppData();
       ActivityInfo activity_info = resolve_info.activityInfo;
-      app_data.name          = resolve_info.loadLabel(pm).toString();
-      app_data.package_name  = activity_info.applicationInfo.packageName;
+      AppData app_data = new AppData(activity_info.applicationInfo.packageName);
+      app_data.name = resolve_info.loadLabel(pm).toString();
       if (!app_data.name.equals(own_name)) { // Exclude self from list
         app_list.add(app_data);
       }

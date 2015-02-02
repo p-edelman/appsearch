@@ -1,6 +1,8 @@
 package com.mrpi.appsearch;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabaseLockedException;
@@ -16,8 +18,11 @@ import java.util.TreeMap;
 /** Class for finding the most used apps in a background thread. */
 public class SearchMostUsedThread extends SearchThread {
 
+  private PackageManager m_package_manger;
+
   public SearchMostUsedThread(Context context, SearchThreadListener listener) {
     super(context, listener);
+    m_package_manger = context.getPackageManager();
   }
 
   /** Query the database to find the most used apps.
@@ -37,75 +42,40 @@ public class SearchMostUsedThread extends SearchThread {
     }
 
     if (db != null) {
-      long time_slot = CountAndDecay.getTimeSlot();
-      int day = Calendar.getInstance().get(Calendar.DAY_OF_WEEK);
-      String time_slot_str = Long.toString(time_slot);
-      String day_str = Integer.toString(day);
-
-      // Create an entry for each app with the score calculated by clicks and
-      // day.
+      // Create an entry for each app to keep it unique
       Map<String, AppData> app_map = new TreeMap<String, AppData>();
 
-      // Get the top eight apps for this time slot and day
-      Cursor cursor = db.query(DBHelper.TBL_USAGE_WEEK,
-              new String[]{"public_name", "package_name", "count"},
-              "time_slot=? AND day=?",
+      // Get the top eight apps for this time and day or overall. Since apps might occur twice in
+      // this list (one for time slot and day, and one overall), this will result in at least four
+      // apps.
+      String time_slot_str = Long.toString(CountAndDecay.getTimeSlot());
+      String day_str       = Integer.toString(Calendar.getInstance().get(Calendar.DAY_OF_WEEK));
+      Cursor cursor = db.query(DBHelper.TBL_USAGE,
+              new String[]{"package_name", "score"},
+              "(time_slot=? AND day=?) OR (time_slot=-1 AND day=-1)",
               new String[]{time_slot_str, day_str},
               null, null,
-              "count DESC", "8");
-      convertCursorToAppData(cursor, app_map);
-      Log.d("MostUsed", "Got results for time and day");
-      cursor.close();
+              "score DESC", "8");
 
-      // Get the top eight apps overall
-      cursor = db.query(DBHelper.TBL_USAGE_ALL,
-              new String[]{"public_name", "package_name", "count"},
-              null, null, null, null,
-              "count DESC", "8");
-      convertCursorToAppData(cursor, app_map);
-      Log.d("MostUsed", "Got results overall");
-      cursor.close();
-
-      // Sort the apps by ranking and generate an ArrayList with the sorted
-      // apps.
-      if (!isCancelled()) {
-        apps = new ArrayList<AppData>(app_map.values());
-        Collections.sort(apps, new Comparator<Object>() {
-          public int compare(Object obj1, Object obj2) {
-            return ((AppData)obj2).match_rating - ((AppData)obj1).match_rating;
-          }
-        });
+      boolean result = cursor.moveToFirst();
+      while (result && !isCancelled()) {
+        String package_name = cursor.getString(0);
+        // If the package is already present in the list, this new entry has a lower score so we can
+        // ignore it.
+        if (!app_map.containsKey(package_name)) {
+          AppData app_data = new AppData(package_name);
+          app_data.match_rating = cursor.getInt(1);
+          app_map.put(package_name, app_data);
+          Log.d("SearchMostUsedThread", "Rating for " + app_data.name + " is " + app_data.match_rating);
+        }
+        result = cursor.moveToNext();
       }
+      cursor.close();
+
+      // Generate an ArrayList with the sorted apps.
+      if (!isCancelled()) apps = new ArrayList<AppData>(app_map.values());
     }
 
     return apps;
-  }
-
-  /** Convert a database cursor with the results from an entry in the mapping
-   *  of package names and AppData objects. If an app is found that is already
-   *  in the map, and its rating is lower, the object in the map will be updated
-   *  with the higher value.
-   *  @param cursor the cursor to read from, with fields of (public_name,
-   *                package_name and match_rating).
-   *  @param app_map the mapping between package names and AppData objects. */
-  void convertCursorToAppData(Cursor cursor, Map<String, AppData> app_map) {
-    boolean result = cursor.moveToFirst();
-    while (result && !isCancelled()) {
-      String package_name = cursor.getString(1);
-      AppData app_data = app_map.get(package_name);
-      if (app_data == null) {
-        app_data = new AppData();
-        app_data.name         = cursor.getString(0);
-        app_data.package_name = package_name;
-        app_data.match_rating = cursor.getInt(2);
-        app_map.put(package_name, app_data);
-      } else {
-        if (cursor.getInt(2) > app_data.match_rating) {
-          app_data.match_rating = cursor.getInt(2);
-        }
-      }
-      Log.d("SearchMostUsedThread", "Rating for " + app_data.name + " is " + app_data.match_rating);
-      result = cursor.moveToNext();
-    }
   }
 }

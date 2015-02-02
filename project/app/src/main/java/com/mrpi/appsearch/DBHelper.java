@@ -39,13 +39,10 @@ public class DBHelper extends SQLiteOpenHelper {
   public static final String TBL_APPS_DIRTY    = "dirty";
   public static final String SCHEMA_INSTALLED  = "(package_name TEXT PRIMARY KEY, public_name TEXT)";
 
-  /** The schema for the tables with the app usage. */
-  public static final String TBL_USAGE_ALL     = "usage_all";
-  public static final String TBL_USAGE_WEEK    = "usage_week";
-  private static final String SCHEMA_USAGE_ALL  =
-    "(public_name TEXT, package_name TEXT, count INTEGER, PRIMARY KEY (package_name))";
-  private static final String SCHEMA_USAGE_WEEK =
-    "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER, PRIMARY KEY (package_name, day, time_slot))";
+  /** The schema for the table with the app usage. */
+  public  static final String TBL_USAGE    = "usage";
+  private static final String SCHEMA_USAGE =
+    "(package_name TEXT, day INTEGER, time_slot INTEGER, score INTEGER, PRIMARY KEY (package_name, day, time_slot))";
 
   /** The metadata table is a simple text key/numeric value storage. */
   private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";
@@ -67,8 +64,7 @@ public class DBHelper extends SQLiteOpenHelper {
     db.beginTransaction();
     db.execSQL("CREATE TABLE " + TBL_APPS + " " + SCHEMA_INSTALLED + ";");
     db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");
-    db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL);
-    db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK);
+    db.execSQL("CREATE TABLE " + TBL_USAGE + " " + SCHEMA_USAGE);
     db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
     db.setTransactionSuccessful();
     db.endTransaction();
@@ -80,8 +76,7 @@ public class DBHelper extends SQLiteOpenHelper {
     Log.d("AppSearch", "New version: " + new_version);
     if ((old_version == 1) && (new_version == 2)) {
       db.beginTransaction();
-      db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL + ";");
-      db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK + ";");
+      db.execSQL("CREATE TABLE " + TBL_USAGE + " " + SCHEMA_USAGE + ";");
       db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
       db.setTransactionSuccessful();
       db.endTransaction();
@@ -112,7 +107,6 @@ public class DBHelper extends SQLiteOpenHelper {
     Log.d("AppSearch", "Removing package \"" + package_name + "\" from caches");
     SQLiteDatabase db = getWritableDatabase();
     String[] where_args = {package_name};
-    db.delete(TBL_USAGE_ALL, "package_name=?", where_args);
-    db.delete(TBL_USAGE_WEEK, "package_name=?", where_args);
+    db.delete(TBL_USAGE, "package_name=?", where_args);
   }
 }

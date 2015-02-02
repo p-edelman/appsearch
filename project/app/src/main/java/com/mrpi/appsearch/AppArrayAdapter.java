@@ -3,6 +3,7 @@ package com.mrpi.appsearch;
 import java.util.List;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.drawable.Drawable;
@@ -72,11 +73,16 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
     ImageView image_view = (ImageView) row_view.findViewById(R.id.AppIcon);
     TextView text_view   = (TextView)row_view.findViewById(R.id.AppName);
 
-    // Set icon
     Drawable icon;
     try {
+      // Set icon
       icon = m_package_manager.getApplicationIcon(app_data.package_name);
       image_view.setImageDrawable(icon);
+      // Find the name, if it is not set
+      if (app_data.name == null) {
+        ApplicationInfo app_info = m_package_manager.getApplicationInfo(app_data.package_name, 0);
+        app_data.name = m_package_manager.getApplicationLabel(app_info).toString();
+      }
     } catch (NameNotFoundException e) {
       return null;
     }

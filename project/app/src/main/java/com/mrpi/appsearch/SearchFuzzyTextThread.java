@@ -8,7 +8,6 @@ import java.util.Locale;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.AsyncTask;
 import android.util.Log;
 
 /** Perform a fuzzy match on the app cache in the background and populate the
@@ -39,19 +38,18 @@ public class SearchFuzzyTextThread extends SearchThread {
     // Query the database for all app names that have the characters in our
     // query in the proper order, although not necessary adjacent to each
     // other.
-    SQLiteDatabase cache = AppCacheOpenHelper.getInstance(m_context).getReadableDatabase();
+    SQLiteDatabase db = DBHelper.getInstance(m_context).getReadableDatabase();
     String db_query = "%";
     for (int pos = 0; pos < query.length(); pos++) db_query += query.charAt(pos) + "%";
-    Cursor cursor = cache.rawQuery("SELECT DISTINCT public_name, package_name FROM " + AppCacheOpenHelper.TBL_APPS + " WHERE public_name LIKE ?",  new String[]{db_query});
+    Cursor cursor = db.rawQuery("SELECT DISTINCT public_name, package_name FROM " + DBHelper.TBL_APPS + " WHERE public_name LIKE ?",  new String[]{db_query});
 
     // Put the results in a list of AppData.
     final ArrayList<AppData> app_list = new ArrayList<AppData>();
     boolean result = cursor.moveToFirst();
     while (result && !isCancelled()) {
-      AppData app_data = new AppData();
+      AppData app_data = new AppData(cursor.getString(1));
       app_data.name = cursor.getString(0);
       app_data = getMatchRating(app_data, query);
-      app_data.package_name = cursor.getString(1);
       app_list.add(app_data);
       result = cursor.moveToNext();
     }

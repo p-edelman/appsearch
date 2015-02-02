@@ -25,10 +25,10 @@ import android.util.Log;
  *  their number of launches. There are three tables: for launches on this
  *  particular time and day, on this particular time, and overall.
  */
-public class AppCacheOpenHelper extends SQLiteOpenHelper {
+public class DBHelper extends SQLiteOpenHelper {
 
   // The only instance, needed for the singleton mechanism
-  private static AppCacheOpenHelper m_instance;
+  private static DBHelper m_instance;
 
   /** Housekeeping parameters */
   private static final int    DB_VERSION = 2;
@@ -39,13 +39,10 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   public static final String TBL_APPS_DIRTY    = "dirty";
   public static final String SCHEMA_INSTALLED  = "(package_name TEXT PRIMARY KEY, public_name TEXT)";
 
-  /** The schema for the tables with the app usage. */
-  public static final String TBL_USAGE_ALL     = "usage_all";
-  public static final String TBL_USAGE_WEEK    = "usage_week";
-  private static final String SCHEMA_USAGE_ALL  =
-    "(public_name TEXT, package_name TEXT, count INTEGER, PRIMARY KEY (package_name))";
-  private static final String SCHEMA_USAGE_WEEK =
-    "(public_name TEXT, package_name TEXT, day INTEGER, time_slot INTEGER, count INTEGER, PRIMARY KEY (package_name, day, time_slot))";
+  /** The schema for the table with the app usage. */
+  public  static final String TBL_USAGE    = "usage";
+  private static final String SCHEMA_USAGE =
+    "(package_name TEXT, day INTEGER, time_slot INTEGER, score INTEGER, PRIMARY KEY (package_name, day, time_slot))";
 
   /** Collect raw usage data. */
   public static final String TBL_RAW_DATA = "usage_raw";
@@ -55,14 +52,14 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   /** The metadata table is a simple text key/numeric value storage. */
   private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";
 
-  private AppCacheOpenHelper(Context context) {
+  private DBHelper(Context context) {
     super(context, DB_NAME, null, DB_VERSION);
   }
   
   /** Provide access to the single instance. */
-  public static synchronized AppCacheOpenHelper getInstance(Context context) {
+  public static synchronized DBHelper getInstance(Context context) {
     if (m_instance == null) {
-      m_instance = new AppCacheOpenHelper(context.getApplicationContext());
+      m_instance = new DBHelper(context.getApplicationContext());
     }
     return m_instance;
   }
@@ -72,8 +69,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     db.beginTransaction();
     db.execSQL("CREATE TABLE " + TBL_APPS + " " + SCHEMA_INSTALLED + ";");
     db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");
-    db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL);
-    db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK);
+    db.execSQL("CREATE TABLE " + TBL_USAGE + " " + SCHEMA_USAGE);
     db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
     db.execSQL("CREATE TABLE " + TBL_RAW_DATA + " " + SCHEMA_RAW_DATA);
     db.setTransactionSuccessful();
@@ -86,8 +82,7 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     Log.d("AppSearch", "New version: " + new_version);
     if ((old_version == 1) && (new_version == 2)) {
       db.beginTransaction();
-      db.execSQL("CREATE TABLE " + TBL_USAGE_ALL + " " + SCHEMA_USAGE_ALL + ";");
-      db.execSQL("CREATE TABLE " + TBL_USAGE_WEEK + " " + SCHEMA_USAGE_WEEK + ";");
+      db.execSQL("CREATE TABLE " + TBL_USAGE + " " + SCHEMA_USAGE + ";");
       db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
       db.setTransactionSuccessful();
       db.endTransaction();
@@ -118,7 +113,6 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
     Log.d("AppSearch", "Removing package \"" + package_name + "\" from caches");
     SQLiteDatabase db = getWritableDatabase();
     String[] where_args = {package_name};
-    db.delete(TBL_USAGE_ALL, "package_name=?", where_args);
-    db.delete(TBL_USAGE_WEEK, "package_name=?", where_args);
+    db.delete(TBL_USAGE, "package_name=?", where_args);
   }
 }

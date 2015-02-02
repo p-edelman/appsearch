@@ -30,17 +30,16 @@ import java.util.concurrent.TimeUnit;
  */
 public class CountAndDecay {
   /** The score values for each situation */
-  public static final int SCORE_DAY  = 100;
   public static final int SCORE_WEEK = 300;
   public static final int SCORE_ALL  = 10;
 
   /** The daily decay rate for the bonus values. */
   public static final double DECAY_RATE = 0.1;
 
-  private AppCacheOpenHelper m_cache;
+  private DBHelper m_db;
 
-  public CountAndDecay(AppCacheOpenHelper cache) {
-    m_cache = cache;
+  public CountAndDecay(DBHelper db) {
+    m_db = db;
   }
 
   /** Get the current five minute slot of the day.
@@ -50,7 +49,7 @@ public class CountAndDecay {
   public static long getTimeSlot() {
     Calendar now = Calendar.getInstance();
     long slot = (now.get(Calendar.HOUR_OF_DAY) * 12) +
-            now.get(Calendar.MINUTE) / 5;
+                 now.get(Calendar.MINUTE) / 5;
     return slot;
   }
 
@@ -69,35 +68,30 @@ public class CountAndDecay {
     registerRaw(public_name, package_name);
 
     // Update the overall table
-    SQLiteDatabase db = m_cache.getWritableDatabase();
-    SQLiteStatement all_statement = db.compileStatement(
-      "REPLACE INTO " + AppCacheOpenHelper.TBL_USAGE_ALL + " (public_name, package_name, count) VALUES (" +
-        "?, ?, " +
-        "COALESCE((" +
-          "SELECT count FROM " + AppCacheOpenHelper.TBL_USAGE_ALL + " WHERE public_name=?" +
-        "), 0) + ?)");
-    all_statement.bindString(1, public_name);
-    all_statement.bindString(2, package_name);
-    all_statement.bindString(3, public_name);
-    all_statement.bindLong(4, SCORE_ALL);
-    all_statement.executeInsert();
+    SQLiteDatabase db = m_db.getWritableDatabase();
 
     // The SQL statement for the weekly usage field
-    SQLiteStatement week_statement = db.compileStatement(
-      "REPLACE INTO " + AppCacheOpenHelper.TBL_USAGE_WEEK + " (public_name, package_name, time_slot, day, count) VALUES (" +
-        "?, ?, ?, ?, " +
+    SQLiteStatement statement = db.compileStatement(
+      "REPLACE INTO " + DBHelper.TBL_USAGE + " (package_name, time_slot, day, score) VALUES (" +
+        "?, ?, ?, " +
         "COALESCE((" +
-          "SELECT count FROM " + AppCacheOpenHelper.TBL_USAGE_WEEK + " WHERE public_name=? AND time_slot=? AND day=?" +
+          "SELECT score FROM " + DBHelper.TBL_USAGE + " WHERE package_name=? AND time_slot=? AND day=?" +
         "), 0) + ?)");
-    week_statement.bindString(1, public_name);
-    week_statement.bindString(2, package_name);
-    week_statement.bindString(5, public_name);
+    statement.bindString(1, package_name);
+    statement.bindString(4, package_name);
+
+    // Insert the usage with time slot and day of -1 just to count the app launch
+    statement.bindLong(2, -1);
+    statement.bindLong(3, -1);
+    statement.bindLong(5, -1);
+    statement.bindLong(6, -1);
+    statement.bindLong(7, SCORE_ALL);
+    statement.executeInsert();
 
     long slot = getTimeSlot();
     int day = Calendar.getInstance().get(Calendar.DAY_OF_WEEK);
 
-    // Write the current and surrounding time slots to the daily and weekly
-    // usage tables
+    // Write the current and surrounding time slots for the time based usage
     int adjacent = 5;
     while (adjacent > -6) {
       long tmp_slot = slot + adjacent;
@@ -110,15 +104,15 @@ public class CountAndDecay {
         day -= 1;
         if (day == -1) day = 6;
       }
-      week_statement.bindLong(3, tmp_slot);
-      week_statement.bindLong(4, day);
-      week_statement.bindLong(6, tmp_slot);
-      week_statement.bindLong(7, day);
+      statement.bindLong(2, tmp_slot);
+      statement.bindLong(3, day);
+      statement.bindLong(5, tmp_slot);
+      statement.bindLong(6, day);
 
       // Insert progressively smaller bonuses the further away we are from the
       // time slot
-      week_statement.bindLong(8, SCORE_WEEK - ((Math.abs(adjacent) * 5)));
-      week_statement.executeInsert();
+      statement.bindLong(7, SCORE_WEEK - ((Math.abs(adjacent) * 5)));
+      statement.executeInsert();
 
       adjacent--;
     }
@@ -128,11 +122,11 @@ public class CountAndDecay {
   /** Register the app launch in the raw table, thus an app launch at a single
    *  datetime. */
   private void registerRaw(String public_name, String package_name) {
-    SQLiteDatabase db = m_cache.getWritableDatabase();
+    SQLiteDatabase db = m_db.getWritableDatabase();
     ContentValues values = new ContentValues();
     values.put("public_name", public_name);
     values.put("package_name", package_name);
-    db.insert(AppCacheOpenHelper.TBL_RAW_DATA, null, values);
+    db.insert(DBHelper.TBL_RAW_DATA, null, values);
   }
 
   /** Decay the click counts in the database for the number of days since the
@@ -144,18 +138,16 @@ public class CountAndDecay {
 
     if (days_to_decay > 0) {
       Log.d("AppSearch", "Decaying " + days_to_decay + " days");
-      SQLiteDatabase db = m_cache.getWritableDatabase();
+      SQLiteDatabase db = m_db.getWritableDatabase();
       db.beginTransactionNonExclusive();
       for (int day = 0; day < days_to_decay; day++) {
         // Decay all values by 10 percent
-        db.execSQL("UPDATE " + AppCacheOpenHelper.TBL_USAGE_ALL  + " SET count = round(count * 0.9)");
-        db.execSQL("UPDATE " + AppCacheOpenHelper.TBL_USAGE_WEEK + " SET count = round(count * 0.9)");
+        db.execSQL("UPDATE " + DBHelper.TBL_USAGE  + " SET score = round(score * 0.9)");
 
         // Delete all entries that fall below 6 (they cannot decay any further).
         // This happens after a little bit less than a month for an app that hasn't
         // been clicked anymore.
-        db.delete(AppCacheOpenHelper.TBL_USAGE_ALL,  "count < 6", null);
-        db.delete(AppCacheOpenHelper.TBL_USAGE_WEEK, "count < 6", null);
+        db.delete(DBHelper.TBL_USAGE,  "score < 6", null);
       }
 
       // Write the decay day back to the database.
@@ -176,7 +168,7 @@ public class CountAndDecay {
    *          operation according the database. */
   private int getDaysSinceLastDecay(int to_when) {
     int days_to_decay = 0;
-    SQLiteDatabase db = m_cache.getReadableDatabase();
+    SQLiteDatabase db = m_db.getReadableDatabase();
     Cursor cursor = db.query("metadata",
             new String[]{"content"},
             "field='last_decay'",
@@ -200,7 +192,7 @@ public class CountAndDecay {
       ContentValues values = new ContentValues();
       values.put("field", "last_decay");
       values.put("content", Calendar.getInstance().get(Calendar.DAY_OF_YEAR));
-      db = m_cache.getWritableDatabase();
+      db = m_db.getWritableDatabase();
       db.insert("metadata", null, values);
     }
     cursor.close();

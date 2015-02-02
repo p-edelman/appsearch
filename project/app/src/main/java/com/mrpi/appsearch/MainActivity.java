@@ -212,7 +212,7 @@ public class MainActivity
 
     // Save the launch time slot to the database
     if (m_count_decay == null) {
-      m_count_decay = new CountAndDecay(AppCacheOpenHelper.getInstance(this));
+      m_count_decay = new CountAndDecay(DBHelper.getInstance(this));
     }
     m_count_decay.countAppLaunch(name, package_name);
       
@@ -253,8 +253,8 @@ public class MainActivity
     OutputStream os = null;
     try {
       external_file.createNewFile();
-      AppCacheOpenHelper cache = AppCacheOpenHelper.getInstance(this);
-      is = new FileInputStream(cache.getReadableDatabase().getPath());
+      DBHelper db_helper = DBHelper.getInstance(this);
+      is = new FileInputStream(db_helper.getReadableDatabase().getPath());
       os = new FileOutputStream(external_file);
       // Transfer bytes from in to out
       byte[] buf = new byte[1024];

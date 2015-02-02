@@ -45,10 +45,9 @@ public class AppIndexService extends IntentService {
     String own_name = getString(R.string.app_name);
     ArrayList<AppData> app_list = new ArrayList<AppData>();
     for (ResolveInfo resolve_info : packages) {
-      AppData app_data = new AppData();
       ActivityInfo activity_info = resolve_info.activityInfo;
-      app_data.name          = resolve_info.loadLabel(pm).toString();
-      app_data.package_name  = activity_info.applicationInfo.packageName;
+      AppData app_data = new AppData(activity_info.applicationInfo.packageName);
+      app_data.name = resolve_info.loadLabel(pm).toString();
       if (!app_data.name.equals(own_name)) { // Exclude self from list
         app_list.add(app_data);
       }
@@ -57,20 +56,20 @@ public class AppIndexService extends IntentService {
     // Put all we found in the database. We do this in a separate loop and not
     // during indexing, because that process is quite slow and so would prevent
     // search access to the database while indexing.
-    AppCacheOpenHelper cache = AppCacheOpenHelper.getInstance(getBaseContext());
-    SQLiteDatabase db = cache.getWritableDatabase();
+    DBHelper db_helper = DBHelper.getInstance(getBaseContext());
+    SQLiteDatabase db = db_helper.getWritableDatabase();
     db.beginTransactionNonExclusive();
     for (AppData app_data: app_list) {
       ContentValues values = new ContentValues();
       values.put("public_name",  app_data.name);
       values.put("package_name", app_data.package_name);
-      db.replace(AppCacheOpenHelper.TBL_APPS_DIRTY, null, values);
+      db.replace(DBHelper.TBL_APPS_DIRTY, null, values);
     }
     db.setTransactionSuccessful();
     db.endTransaction();
 
     Log.d("AppSearch", "Indexing completed in the dirty table");
-    cache.switchDirty();
+    db_helper.switchDirty();
   }
 
 }

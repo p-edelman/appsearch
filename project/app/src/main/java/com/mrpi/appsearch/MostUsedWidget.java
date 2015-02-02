@@ -10,9 +10,6 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -32,8 +29,14 @@ import java.util.Map;
  *  three most used apps for the current time, next to an app to launch the
  *  search.
  *  Most widget events are broadcasted as intents. This class catches these
- *  intents and handles them by itself. */
-public class MostUsedWidget extends AppWidgetProvider {
+ *  intents and handles them by itself.
+ *  This class also implements the SearchThreadListener interface, which
+ *  provides a mechanism for search AsyncTasks to communicate back their
+ *  results. An update is performed by calling a SearchMostUsedThread and letting
+ *  the onSearchThreadFinished() method update the widget display. */
+public class MostUsedWidget
+        extends AppWidgetProvider
+        implements SearchThreadListener {
 
   /** Intent actions defined within this class. Because of the widget
    *  architecture in Android, interacting with the widget is done via intents.
@@ -53,17 +56,27 @@ public class MostUsedWidget extends AppWidgetProvider {
   public void onUpdate(Context          context,
                        AppWidgetManager widget_manager,
                        int[]            widget_ids) {
-    updateWidget(context);
+    updateWidgetStart(context);
     super.onUpdate(context, widget_manager, widget_ids);
   }
 
-  /** Update the widget display.
-   *  This method searches for the three top apps and sets the icons of (all)
-   *  the active widget(s) them.
+  /** Set the updating of the widget display in motion.
+   *  This method launches a SearchMostUsedThread to find the top apps. When it's
+   *  done, the onSearchThreadFinished() method is called to handle the result.
    *  @param context the applciation context for this widget */
-  private void updateWidget(Context context) {
+  private void updateWidgetStart(Context context) {
     Log.d("Widget", "Updating app widget");
 
+    SearchMostUsedThread search_thread = new SearchMostUsedThread(context, this);
+    search_thread.execute();
+  }
+
+  /** Set the icons in (all) the active widget(s) to the list that was found by
+   *  the SearchMostUsedThread.
+   *  @param apps a list of apps, sorted in order of relevance descending
+   *  @param context the application context. This is needed for the
+   *                 SearchMostUsedThread. */
+  public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
     // Instantiate the RemoteViews object for the app widget layout.
     RemoteViews views = new RemoteViews(context.getPackageName(),
                                         R.layout.most_used_widget);
@@ -86,7 +99,6 @@ public class MostUsedWidget extends AppWidgetProvider {
     views.setOnClickPendingIntent(R.id.widget_text_search, pending_intent);
 
     // Get the top apps and set them to the icons
-    ArrayList<AppData> apps = getMostUsedApps(context);
     int app_num    = 0;
     int drawn_apps = 0;
     while(app_num < apps.size() && drawn_apps < 3) { // Safeguard for when apps from the database are uninstalled in the meantime
@@ -166,89 +178,16 @@ public class MostUsedWidget extends AppWidgetProvider {
     super.onDisabled(context);
   }
 
-  /** Retrieve a list with the most used apps from the database. */
-  static private ArrayList<AppData> getMostUsedApps(Context context) {
-    ArrayList<AppData> apps = new ArrayList<AppData>();
-
-    SQLiteDatabase db = null;
-    try {
-      db = AppCacheOpenHelper.getInstance(context).getReadableDatabase();
-    } catch (SQLiteDatabaseLockedException e) {
-      // TODO: Handle this properly
-      Log.d("AppSearch", "Can't get a lock on the database!");
-    }
-
-    if (db != null) {
-      long time_slot = CountAndDecay.getTimeSlot();
-      int day = Calendar.getInstance().get(Calendar.DAY_OF_WEEK);
-      String time_slot_str = Long.toString(time_slot);
-      String day_str = Integer.toString(day);
-
-      // Create an entry for each app with the score calculated by clicks and
-      // day.
-      Map<String, AppData> app_map = new HashMap<String, AppData>();
-
-      // Get the top eight apps for this time slot and day
-      Cursor cursor = db.query(AppCacheOpenHelper.TBL_USAGE_WEEK,
-              new String[]{"public_name", "package_name", "count"},
-              "time_slot=? AND day=?",
-              new String[]{time_slot_str, day_str},
-              null, null,
-              "count DESC", "8");
-      convertCursorToAppData(cursor, app_map);
-      Log.d("MostUsed", "Got results for time and day");
-      cursor.close();
-
-      // Get the top eight apps overall
-      cursor = db.query(AppCacheOpenHelper.TBL_USAGE_ALL,
-              new String[]{"public_name", "package_name", "count"},
-              null, null, null, null,
-              "count DESC", "8");
-      convertCursorToAppData(cursor, app_map);
-      Log.d("MostUsed", "Got results overall");
-      cursor.close();
-
-      // Now convert it to an ArrayList and sort the results by the ratings, in
-      // descending order.
-      apps = new ArrayList<AppData>(app_map.values());
-      Collections.sort(apps, new Comparator<Object>() {
-        public int compare(Object obj1, Object obj2) {
-          return ((AppData) obj2).match_rating - ((AppData) obj1).match_rating;
-        }
-      });
-    }
-
-    return apps;
-  }
-
-  static void convertCursorToAppData(Cursor cursor, Map<String, AppData> app_map) {
-    boolean result = cursor.moveToFirst();
-    while (result) {
-      String package_name = cursor.getString(1);
-      AppData app_data = app_map.get(package_name);
-      if (app_data == null) {
-        app_data = new AppData();
-        app_data.name         = cursor.getString(0);
-        app_data.package_name = package_name;
-        app_data.match_rating = cursor.getInt(2);
-        app_map.put(package_name, app_data);
-      } else {
-        if (cursor.getInt(2) > app_data.match_rating) {
-          app_data.match_rating = cursor.getInt(2);
-        }
-      }
-      Log.d("SearchWidget", "Rating for " + app_data.name + " is " + app_data.match_rating);
-      result = cursor.moveToNext();
-    }
-  }
-
   /** Handle intents to this class.
    *  The AppWidgetProvider base class uses thus mechanism quite extensively, so
    *  we filter out only the relevant intents and call through to the base class
    *  for the rest. */
   @Override
   public void onReceive(Context context, Intent intent) {
-    if (intent.getAction().equals(ACTION_WIDGET_SEARCH)) {
+    if (intent.getAction().equals(ACTION_WIDGET_UPDATE)) {
+      Log.d("Widget", "Received an alarm schedule to update");
+      updateWidgetStart(context);
+    } else if (intent.getAction().equals(ACTION_WIDGET_SEARCH)) {
       // Open the search app
       Intent launch_intent = new Intent(context, MainActivity.class);
       launch_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -266,14 +205,10 @@ public class MostUsedWidget extends AppWidgetProvider {
       Log.d("Widget", "Launching app " + name);
       Intent launch_intent = context.getPackageManager().getLaunchIntentForPackage(package_name);
       context.startActivity(launch_intent);
-    } else if (intent.getAction().equals(ACTION_WIDGET_UPDATE)) {
-      Log.d("Widget", "Received an alarm schedule to update");
-      updateWidget(context);
     } else {
       super.onReceive(context, intent);
     }
   }
-
 }
 
 

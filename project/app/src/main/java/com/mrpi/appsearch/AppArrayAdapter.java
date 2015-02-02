@@ -15,7 +15,6 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.util.Log;
 
 /** Adapter to provide the data of the search results and present it in the
  *  proper way.
@@ -84,7 +83,7 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
 
     // Set text; make the matching letters underlined and bold
     text_view.setText(app_data.name, TextView.BufferType.SPANNABLE);
-    if (!m_render_clear) {
+    if (!m_render_clear && app_data.char_matches != null) {
       Spannable spannable = (Spannable)text_view.getText();
       for (Integer index : app_data.char_matches) {
         spannable.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), index, index + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -96,8 +95,7 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
   }
 
   /** Special method to re-render the results list but without the highlighting
-    *  of the matched characters.
-    */
+    *  of the matched characters. */
   public void renderClear() {
     m_render_clear = true;
     notifyDataSetChanged();

@@ -40,20 +40,21 @@ import android.widget.SearchView;
  *  seconds), the search is performed on a cached index.
  *  <p>
  *  Also searching and subsequently formatting the results is done in a parallel
- *  process through {@link SearchThread}. This prevents the keyboard from
+ *  process through {@link SearchFuzzyTextThread}. This prevents the keyboard from
  *  blocking when a search is performed. Although this is quite fast in general,
  *  it can sometimes hang when starting up. When more characters are typed while
  *  the current search isn't finished, it is aborted, further speeding up the
  *  search.
  */
-public class MainActivity extends Activity {
+public class MainActivity
+        extends Activity
+        implements SearchThreadListener {
 
   // Class variables
   private SearchView     m_search_view;     // The GUI SearchView element
   private ListView       m_results_view;    // The GUI ListView to present the
                                             // results of the search.
-  private AsyncTask<String, Void, ArrayList<AppData>> m_search_thread;
-                                            // The background thread to perform
+  private SearchThread   m_search_thread;   // The background thread to perform
                                             // the search. It is needed to keep
                                             // this instance so it can be
                                             // cancelled when a new query
@@ -129,6 +130,14 @@ public class MainActivity extends Activity {
       adapter.clear();
     }
 
+    String starting_action = getIntent().getAction();
+    if (starting_action != null &&
+            (starting_action.equals(Intent.ACTION_MAIN) ||
+                    starting_action.equals(Intent.ACTION_ASSIST))) {
+      m_search_thread = new SearchMostUsedThread(this, this);
+      m_search_thread.execute();
+    }
+
     // Every time onResume is called, the apps are indexed again.
     Intent app_index_intent = new Intent(this, AppIndexService.class);
     startService(app_index_intent);
@@ -165,16 +174,16 @@ public class MainActivity extends Activity {
     Log.d("Reset", "Everything clean");
   }
   
-  /** Start a {link SearchThread} to perform a fuzzy match on the given query.
+  /** Start a {link SearchFuzzyTextThread} to perform a fuzzy match on the given query.
    *  If a search was still running, it is cancelled.
    *  @param query the list of characters to search for in an app name.
    */
-  private void doSearch(final String query) {
+  private void doSearch(final String query) {  
     if (query.length() > 0) {
       if (m_search_thread != null) {
         m_search_thread.cancel(true);
       }
-      m_search_thread = new SearchThread(this);
+      m_search_thread = new SearchFuzzyTextThread(this, this);
       m_search_thread.execute(query);
     } else {
       // If the user clears the view, we don't clean up the list of results but
@@ -274,5 +283,19 @@ public class MainActivity extends Activity {
     } else {
       Log.e("AppSearch", "Couldn't copy the database file");
     }
+  }
+
+  /** We need to find out how the activity was brought to the foreground; by
+   *  the widget or by a launcher/search button. So we need to set the starting
+   *  intent to the intent that brought it to the foreground. */
+  @Override
+  protected void onNewIntent(Intent new_intent) {
+    setIntent(new_intent);
+  }
+
+  public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
+    AppArrayAdapter adapter = new AppArrayAdapter(this, R.id.resultsListView, apps);
+    ListView results_list_view = (ListView)findViewById(R.id.resultsListView);
+    results_list_view.setAdapter(adapter);
   }
 }

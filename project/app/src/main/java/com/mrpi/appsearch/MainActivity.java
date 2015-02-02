@@ -36,6 +36,9 @@ public class MainActivity
         extends Activity
         implements SearchThreadListener {
 
+  /** The maximum number of most used apps to show when opening the activity. */
+  private static final int MAX_TOP_APPS = 4;
+
   // Class variables
   private SearchView     m_search_view;     // The GUI SearchView element
   private ListView       m_results_view;    // The GUI ListView to present the
@@ -115,7 +118,7 @@ public class MainActivity
             (starting_action.equals(Intent.ACTION_MAIN) ||
                     starting_action.equals(Intent.ACTION_ASSIST))) {
       m_search_thread = new SearchMostUsedThread(this, this);
-      m_search_thread.execute();
+      m_search_thread.execute(MAX_TOP_APPS);
     }
 
     // Every time onResume is called, the apps are indexed again.

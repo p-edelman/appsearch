@@ -61,7 +61,7 @@ public class MostUsedWidget
     Log.d("Widget", "Updating app widget");
 
     SearchMostUsedThread search_thread = new SearchMostUsedThread(context, this);
-    search_thread.execute();
+    search_thread.execute(3);
   }
 
   /** Set the icons in (all) the active widget(s) to the list that was found by

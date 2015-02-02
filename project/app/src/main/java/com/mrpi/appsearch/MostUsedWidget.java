@@ -191,7 +191,7 @@ public class MostUsedWidget
       final String package_name = intent.getStringExtra("package_name");
 
       // Save the launch time slot to the database
-      CountAndDecay count_decay = new CountAndDecay(AppCacheOpenHelper.getInstance(context));
+      CountAndDecay count_decay = new CountAndDecay(DBHelper.getInstance(context));
       count_decay.countAppLaunch(name, package_name);
 
       // Now, launch the app.
@@ -203,5 +203,3 @@ public class MostUsedWidget
     }
   }
 }
-
-

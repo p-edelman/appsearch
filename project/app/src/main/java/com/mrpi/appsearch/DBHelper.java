@@ -25,10 +25,10 @@ import android.util.Log;
  *  their number of launches. There are three tables: for launches on this
  *  particular time and day, on this particular time, and overall.
  */
-public class AppCacheOpenHelper extends SQLiteOpenHelper {
+public class DBHelper extends SQLiteOpenHelper {
 
   // The only instance, needed for the singleton mechanism
-  private static AppCacheOpenHelper m_instance;
+  private static DBHelper m_instance;
 
   /** Housekeeping parameters */
   private static final int    DB_VERSION = 2;
@@ -50,14 +50,14 @@ public class AppCacheOpenHelper extends SQLiteOpenHelper {
   /** The metadata table is a simple text key/numeric value storage. */
   private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";
 
-  private AppCacheOpenHelper(Context context) {
+  private DBHelper(Context context) {
     super(context, DB_NAME, null, DB_VERSION);
   }
   
   /** Provide access to the single instance. */
-  public static synchronized AppCacheOpenHelper getInstance(Context context) {
+  public static synchronized DBHelper getInstance(Context context) {
     if (m_instance == null) {
-      m_instance = new AppCacheOpenHelper(context.getApplicationContext());
+      m_instance = new DBHelper(context.getApplicationContext());
     }
     return m_instance;
   }

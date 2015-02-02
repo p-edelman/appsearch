@@ -53,8 +53,8 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
         return row_view;
       } else {
         // App is not installed anymore
-        AppCacheOpenHelper cache = AppCacheOpenHelper.getInstance(getContext());
-        cache.removePackage(app_data.package_name);
+        DBHelper db_helper = DBHelper.getInstance(getContext());
+        db_helper.removePackage(app_data.package_name);
         m_app_data.remove(position);
         notifyDataSetChanged();
       }

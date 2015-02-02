@@ -8,7 +8,6 @@ import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -193,7 +192,7 @@ public class MainActivity
 
     // Save the launch time slot to the database
     if (m_count_decay == null) {
-      m_count_decay = new CountAndDecay(AppCacheOpenHelper.getInstance(this));
+      m_count_decay = new CountAndDecay(DBHelper.getInstance(this));
     }
     m_count_decay.countAppLaunch(name, package_name);
       

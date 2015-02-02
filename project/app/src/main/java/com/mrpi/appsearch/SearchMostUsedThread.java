@@ -4,7 +4,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabaseLockedException;
-import android.os.AsyncTask;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -31,7 +30,7 @@ public class SearchMostUsedThread extends SearchThread {
     // Open the database
     SQLiteDatabase db = null;
     try {
-      db = AppCacheOpenHelper.getInstance(m_context).getReadableDatabase();
+      db = DBHelper.getInstance(m_context).getReadableDatabase();
     } catch (SQLiteDatabaseLockedException e) {
       // TODO: Handle this properly
       Log.d("AppSearch", "Can't get a lock on the database!");
@@ -48,7 +47,7 @@ public class SearchMostUsedThread extends SearchThread {
       Map<String, AppData> app_map = new TreeMap<String, AppData>();
 
       // Get the top eight apps for this time slot and day
-      Cursor cursor = db.query(AppCacheOpenHelper.TBL_USAGE_WEEK,
+      Cursor cursor = db.query(DBHelper.TBL_USAGE_WEEK,
               new String[]{"public_name", "package_name", "count"},
               "time_slot=? AND day=?",
               new String[]{time_slot_str, day_str},
@@ -59,7 +58,7 @@ public class SearchMostUsedThread extends SearchThread {
       cursor.close();
 
       // Get the top eight apps overall
-      cursor = db.query(AppCacheOpenHelper.TBL_USAGE_ALL,
+      cursor = db.query(DBHelper.TBL_USAGE_ALL,
               new String[]{"public_name", "package_name", "count"},
               null, null, null, null,
               "count DESC", "8");

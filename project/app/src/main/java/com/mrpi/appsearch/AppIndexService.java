@@ -57,20 +57,20 @@ public class AppIndexService extends IntentService {
     // Put all we found in the database. We do this in a separate loop and not
     // during indexing, because that process is quite slow and so would prevent
     // search access to the database while indexing.
-    AppCacheOpenHelper cache = AppCacheOpenHelper.getInstance(getBaseContext());
-    SQLiteDatabase db = cache.getWritableDatabase();
+    DBHelper db_helper = DBHelper.getInstance(getBaseContext());
+    SQLiteDatabase db = db_helper.getWritableDatabase();
     db.beginTransactionNonExclusive();
     for (AppData app_data: app_list) {
       ContentValues values = new ContentValues();
       values.put("public_name",  app_data.name);
       values.put("package_name", app_data.package_name);
-      db.replace(AppCacheOpenHelper.TBL_APPS_DIRTY, null, values);
+      db.replace(DBHelper.TBL_APPS_DIRTY, null, values);
     }
     db.setTransactionSuccessful();
     db.endTransaction();
 
     Log.d("AppSearch", "Indexing completed in the dirty table");
-    cache.switchDirty();
+    db_helper.switchDirty();
   }
 
 }

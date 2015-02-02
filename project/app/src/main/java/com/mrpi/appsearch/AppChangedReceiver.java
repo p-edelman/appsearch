@@ -20,8 +20,8 @@ public class AppChangedReceiver extends BroadcastReceiver {
         Uri data = received_intent.getData();
         String pkg_name = data.getEncodedSchemeSpecificPart(); // URL has the form of: "package:package_url"
         Log.d("AppSearch", "Package '" + pkg_name + "' has been uninstalled, removing it from the database");
-        AppCacheOpenHelper cache = AppCacheOpenHelper.getInstance(context);
-        cache.removePackage(pkg_name);
+        DBHelper db_helper = DBHelper.getInstance(context);
+        db_helper.removePackage(pkg_name);
       }
     }
     Intent app_index_intent = new Intent(context, AppIndexService.class);

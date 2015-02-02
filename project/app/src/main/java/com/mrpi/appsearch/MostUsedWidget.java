@@ -25,7 +25,7 @@ import java.util.Calendar;
  *  intents and handles them by itself.
  *  This class also implements the SearchThreadListener interface, which
  *  provides a mechanism for search AsyncTasks to communicate back their
- *  results. An update is performed by calling a FindMostUsedThread and letting
+ *  results. An update is performed by calling a SearchMostUsedThread and letting
  *  the onSearchThreadFinished() method update the widget display. */
 public class MostUsedWidget
         extends AppWidgetProvider
@@ -54,21 +54,21 @@ public class MostUsedWidget
   }
 
   /** Set the updating of the widget display in motion.
-   *  This method launches a FindMostUsedThread to find the top apps. When it's
+   *  This method launches a SearchMostUsedThread to find the top apps. When it's
    *  done, the onSearchThreadFinished() method is called to handle the result.
    *  @param context the applciation context for this widget */
   private void updateWidgetStart(Context context) {
     Log.d("Widget", "Updating app widget");
 
-    FindMostUsedThread search_thread = new FindMostUsedThread(context, this);
+    SearchMostUsedThread search_thread = new SearchMostUsedThread(context, this);
     search_thread.execute();
   }
 
   /** Set the icons in (all) the active widget(s) to the list that was found by
-   *  the FindMostUsedThread.
+   *  the SearchMostUsedThread.
    *  @param apps a list of apps, sorted in order of relevance descending
    *  @param context the application context. This is needed for the
-   *                 FindMostUsedThread. */
+   *                 SearchMostUsedThread. */
   public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
     // Instantiate the RemoteViews object for the app widget layout.
     RemoteViews views = new RemoteViews(context.getPackageName(),

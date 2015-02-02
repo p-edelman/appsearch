@@ -15,26 +15,14 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /** Class for finding the most used apps in a background thread. */
-public class FindMostUsedThread extends AsyncTask<Object, Void, ArrayList<AppData>> {
+public class SearchMostUsedThread extends SearchThread {
 
-  private Context              m_context;
-  private SearchThreadListener m_listener;
-
-  /** Instantiate the class.
-   * @param context an application context where this class can run in (and
-   *                that provides access to the private database of tha app).
-   * @param listener a SearchThreadListener instance whose
-   *                 onSearchThreadFinished() method is called upon completion
-   *                 with the result of the search as a parameter. */
-  public FindMostUsedThread(Context context,
-                            SearchThreadListener listener) {
-    m_context  = context;
-    m_listener = listener;
+  public SearchMostUsedThread(Context context, SearchThreadListener listener) {
+    super(context, listener);
   }
 
   /** Query the database to find the most used apps.
-    * @param params should be empty (so no params).
-    */
+    * @param params should be empty (so no params). */
   @Override
   protected ArrayList<AppData> doInBackground(Object... params) {
     // Our return object
@@ -117,15 +105,8 @@ public class FindMostUsedThread extends AsyncTask<Object, Void, ArrayList<AppDat
           app_data.match_rating = cursor.getInt(2);
         }
       }
-      Log.d("FindMostUsedThread", "Rating for " + app_data.name + " is " + app_data.match_rating);
+      Log.d("SearchMostUsedThread", "Rating for " + app_data.name + " is " + app_data.match_rating);
       result = cursor.moveToNext();
     }
-  }
-
-  /** This method calls the onSearchThreadFinished() method of the
-   *  SearchThreadListener object that called this thread. This essentially
-   *  communicates the results of the query back to the calling program. */
-  protected void onPostExecute(ArrayList<AppData> apps) {
-    m_listener.onSearchThreadFinished(apps, m_context);
   }
 }

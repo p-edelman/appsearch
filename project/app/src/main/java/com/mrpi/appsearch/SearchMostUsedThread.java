@@ -18,8 +18,11 @@ import java.util.TreeMap;
 /** Class for finding the most used apps in a background thread. */
 public class SearchMostUsedThread extends SearchThread {
 
+  private PackageManager m_package_manager;
+
   public SearchMostUsedThread(Context context, SearchThreadListener listener) {
     super(context, listener);
+    m_package_manager = context.getPackageManager();
   }
 
   /** Query the database to find the most used apps.
@@ -68,10 +71,16 @@ public class SearchMostUsedThread extends SearchThread {
         // If the package is already present in the list, this new entry has a lower score so we can
         // ignore it.
         if (!app_map.containsKey(package_name)) {
-          AppData app_data = new AppData(package_name);
-          app_data.match_rating = cursor.getInt(1);
-          app_map.put(package_name, app_data);
-          Log.d("SearchMostUsedThread", "Rating for " + app_data.name + " is " + app_data.match_rating);
+          try {
+            ApplicationInfo app_info = m_package_manager.getApplicationInfo(package_name, 0);
+            String name = m_package_manager.getApplicationLabel(app_info).toString();
+            AppData app_data = new AppData(name, package_name);
+            app_data.match_rating = cursor.getInt(1);
+            app_map.put(package_name, app_data);
+            Log.d("SearchMostUsedThread", "Rating for " + app_data.name + " is " + app_data.match_rating);
+          } catch (PackageManager.NameNotFoundException e) {
+            // Apparently, package has been uninstalled, so ignore it.
+          }
         }
         result = cursor.moveToNext();
       }

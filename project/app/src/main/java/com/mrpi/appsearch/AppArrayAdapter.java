@@ -78,11 +78,6 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
       // Set icon
       icon = m_package_manager.getApplicationIcon(app_data.package_name);
       image_view.setImageDrawable(icon);
-      // Find the name, if it is not set
-      if (app_data.name == null) {
-        ApplicationInfo app_info = m_package_manager.getApplicationInfo(app_data.package_name, 0);
-        app_data.name = m_package_manager.getApplicationLabel(app_info).toString();
-      }
     } catch (NameNotFoundException e) {
       return null;
     }

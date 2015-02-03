@@ -47,8 +47,7 @@ public class SearchFuzzyTextThread extends SearchThread {
     final ArrayList<AppData> app_list = new ArrayList<AppData>();
     boolean result = cursor.moveToFirst();
     while (result && !isCancelled()) {
-      AppData app_data = new AppData(cursor.getString(1));
-      app_data.name = cursor.getString(0);
+      AppData app_data = new AppData(cursor.getString(0), cursor.getString(1));
       app_data = getMatchRating(app_data, query);
       app_list.add(app_data);
       result = cursor.moveToNext();

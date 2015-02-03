@@ -107,16 +107,10 @@ public class MainActivity
     reset();
     Log.d("Status", "App restarted");
 
-    // Clear the results list
-    AppArrayAdapter adapter = (AppArrayAdapter)m_results_view.getAdapter();
-    if (adapter != null) {
-      adapter.clear();
-    }
-
     String starting_action = getIntent().getAction();
     if (starting_action != null &&
             (starting_action.equals(Intent.ACTION_MAIN) ||
-                    starting_action.equals(Intent.ACTION_ASSIST))) {
+             starting_action.equals(Intent.ACTION_ASSIST))) {
       m_search_thread = new SearchMostUsedThread(this, this);
       m_search_thread.execute(MAX_TOP_APPS);
     }

@@ -38,10 +38,12 @@ public class SearchFuzzyTextThread extends SearchThread {
     // Query the database for all app names that have the characters in our
     // query in the proper order, although not necessary adjacent to each
     // other.
+    // The database is pre-sorted on app popularity (for this moment, if all
+    // goes well).
     SQLiteDatabase db = DBHelper.getInstance(m_context).getReadableDatabase();
     String db_query = "%";
     for (int pos = 0; pos < query.length(); pos++) db_query += query.charAt(pos) + "%";
-    Cursor cursor = db.rawQuery("SELECT DISTINCT public_name, package_name FROM " + DBHelper.TBL_APPS + " WHERE public_name LIKE ?",  new String[]{db_query});
+    Cursor cursor = db.rawQuery("SELECT DISTINCT public_name, package_name FROM " + DBHelper.TBL_APPS + " WHERE public_name LIKE ? ORDER BY ROWID",  new String[]{db_query});
 
     // Put the results in a list of AppData.
     final ArrayList<AppData> app_list = new ArrayList<AppData>();
@@ -54,7 +56,10 @@ public class SearchFuzzyTextThread extends SearchThread {
     }
     Log.d("AppSearch", "Found " + cursor.getCount() + " results");
 
-    // Sort by comparing the ratings
+    // Sort by comparing the ratings. If ratings are equal, the order is
+    // preserved by sort(). This is needed, because the apps are pre-sorted on
+    // popularity. When two apps have an equal text match, the most popular one
+    // comes out on top.
     if (!isCancelled()) {
       Collections.sort(app_list, new Comparator<Object>() {
         public int compare(Object obj1, Object obj2) {

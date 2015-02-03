@@ -15,7 +15,10 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 
-/** Class for finding the most used apps in a background thread. */
+/** Class for finding the most used apps in a background thread.
+ *  This thread gets the results from the cached database, but filters out any
+ *  apps that are not present any more on the system; they are not included in
+ *  the result. */
 public class SearchMostUsedThread extends SearchThread {
 
   private PackageManager m_package_manager;
@@ -26,9 +29,10 @@ public class SearchMostUsedThread extends SearchThread {
   }
 
   /** Query the database to find the most used apps.
-    * @param params the number of results required as integer. If this is not given, all apps are
-   *                returned. Note that the result is not guaranteed to be a long as given, as there
-   *                might not be enough apps in the database. */
+    * @param params the number of results required as integer. If this is not
+   *                given, all apps are returned.
+   *                Note that the result is not guaranteed to be a long as
+   *                given, as there might not be enough apps in the database. */
   @Override
   protected ArrayList<AppData> doInBackground(Object... params) {
     int num_results = 0;
@@ -37,7 +41,7 @@ public class SearchMostUsedThread extends SearchThread {
     } catch (ArrayIndexOutOfBoundsException ae) {} // Number of results is unlimited
 
     // Our return object
-    ArrayList<AppData> apps = null;
+    ArrayList<AppData> apps = new ArrayList<AppData>();
 
     // Open the database
     SQLiteDatabase db = null;
@@ -49,47 +53,46 @@ public class SearchMostUsedThread extends SearchThread {
     }
 
     if (db != null) {
-      // Create an entry for each app to keep it unique
-      Map<String, AppData> app_map = new TreeMap<String, AppData>();
-
-      // Get the top apps for this time and day or overall. Since apps might occur twice in this
-      // list (one for time slot and day, and one overall), we need to set the limit to double the
-      // requested number.
+      // Get the top apps for this time and day or overall. Since apps might
+      // occur twice in this list (one for time slot and day, and one overall),
+      // we need to set the limit to double the requested number.
       String time_slot_str = Long.toString(CountAndDecay.getTimeSlot());
       String day_str       = Integer.toString(Calendar.getInstance().get(Calendar.DAY_OF_WEEK));
       String limit_str     = (num_results > 0) ? Integer.toString(2 * num_results) : "";
       Cursor cursor = db.query(DBHelper.TBL_USAGE,
-              new String[]{"package_name", "score"},
-              "(time_slot=? AND day=?) OR (time_slot=-1 AND day=-1)",
-              new String[]{time_slot_str, day_str},
-              null, null,
-              "score DESC", limit_str);
+                               new String[]{"package_name", "score"},
+                               "(time_slot=? AND day=?) OR (time_slot=-1 AND day=-1)",
+                               new String[]{time_slot_str, day_str},
+                               null, null,
+                               "score DESC", limit_str);
+
+      // Process the results, but stop if we have enough data or if this thread
+      // is cancelled.
       boolean result = cursor.moveToFirst();
       while (result && !isCancelled() &&
-             (app_map.size() < num_results || num_results == 0)) {
+             (apps.size() < num_results || num_results == 0)) {
         String package_name = cursor.getString(0);
-        // If the package is already present in the list, this new entry has a lower score so we can
-        // ignore it.
-        if (!app_map.containsKey(package_name)) {
-          try {
-            ApplicationInfo app_info = m_package_manager.getApplicationInfo(package_name, 0);
-            String name = m_package_manager.getApplicationLabel(app_info).toString();
-            AppData app_data = new AppData(name, package_name);
+        try {
+          ApplicationInfo app_info = m_package_manager.getApplicationInfo(package_name, 0);
+          String name = m_package_manager.getApplicationLabel(app_info).toString();
+          AppData app_data = new AppData(name, package_name);
+          // If the package is already present in the list, this new entry has a
+          // lower score so we can ignore it.
+          if (!apps.contains(app_data)) {
             app_data.match_rating = cursor.getInt(1);
-            app_map.put(package_name, app_data);
-            Log.d("SearchMostUsedThread", "Rating for " + app_data.name + " is " + app_data.match_rating);
-          } catch (PackageManager.NameNotFoundException e) {
-            // Apparently, package has been uninstalled, so ignore it.
+            apps.add(app_data);
           }
+        } catch (PackageManager.NameNotFoundException e) {
+          // Apparently, package has been uninstalled, so ignore it.
         }
         result = cursor.moveToNext();
       }
       cursor.close();
-
-      // Generate an ArrayList with the sorted apps.
-      if (!isCancelled()) apps = new ArrayList<AppData>(app_map.values());
     }
 
-    return apps;
+    if (!isCancelled()) {
+      return apps;
+    }
+    return null;
   }
 }

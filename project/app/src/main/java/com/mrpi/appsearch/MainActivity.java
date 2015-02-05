@@ -74,6 +74,7 @@ public class MainActivity
 
   @Override
   protected void onCreate(Bundle saved_instance) {
+    Log.d("Status", "App created");
     super.onCreate(saved_instance);
     setContentView(R.layout.activity_main);
 
@@ -127,6 +128,14 @@ public class MainActivity
     reset();
     Log.d("Status", "App restarted");
 
+    super.onResume();
+
+    // Every time onResume is called, the apps are indexed again.
+    Log.d("AppSearch", "Starting the intent");
+    Intent app_index_intent = new Intent(this, AppIndexService.class);
+    startService(app_index_intent);
+    Log.d("AppSearch", "Intent started");
+
     String starting_action = getIntent().getAction();
     if (starting_action != null &&
             (starting_action.equals(Intent.ACTION_MAIN) ||
@@ -134,12 +143,6 @@ public class MainActivity
       m_search_thread = new SearchMostUsedThread(this, this);
       m_search_thread.execute(MAX_TOP_APPS);
     }
-
-    // Every time onResume is called, the apps are indexed again.
-    Intent app_index_intent = new Intent(this, AppIndexService.class);
-    startService(app_index_intent);
-
-    super.onResume();
   }
 
   @Override

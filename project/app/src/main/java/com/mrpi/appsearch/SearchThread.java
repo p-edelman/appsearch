@@ -17,7 +17,9 @@ public abstract class SearchThread extends AsyncTask<Object, Void, ArrayList<App
    *                that provides access to the private database of tha app).
    * @param listener a SearchThreadListener instance whose
    *                 onSearchThreadFinished() method is called upon completion
-   *                 with the result of the search as a parameter. */
+   *                 with the result of the search as a parameter.
+   *                 This parameter may be null, in which case basically nothing
+   *                 is done with the result. */
   public SearchThread(Context context,
                       SearchThreadListener listener) {
     m_context  = context;
@@ -28,6 +30,8 @@ public abstract class SearchThread extends AsyncTask<Object, Void, ArrayList<App
   /** When done, communicate the results back to the caller by calling its
    *  onSearchThreadFinished() method. */
   protected void onPostExecute(ArrayList<AppData> apps) {
-    m_listener.onSearchThreadFinished(apps, m_context);
+    if (m_listener != null) {
+      m_listener.onSearchThreadFinished(apps, m_context);
+    }
   }
 }

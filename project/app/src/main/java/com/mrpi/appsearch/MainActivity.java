@@ -58,7 +58,10 @@ public class MainActivity
 
   @Override
   protected void onCreate(Bundle saved_instance) {
-    super.onCreate(saved_instance);
+    // We actually never want to restore state, we should always come up as
+    // clean as possible, so we pass in null here.
+    super.onCreate(null);
+
     setContentView(R.layout.activity_main);
 
     // Attach the search system to the SearchView in the layout
@@ -138,10 +141,7 @@ public class MainActivity
   private void reset() {
     Log.d("Reset", "Resetting");
     // Clear results
-    AppArrayAdapter adapter = (AppArrayAdapter)m_results_view.getAdapter(); 
-    if (adapter != null) {
-      adapter.clear();
-    }
+    m_results_view.setAdapter(null);
     m_search_view.setQuery("", false);
     
     if (m_about_dialog != null) {

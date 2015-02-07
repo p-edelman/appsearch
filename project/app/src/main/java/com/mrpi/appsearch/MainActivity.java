@@ -107,6 +107,12 @@ public class MainActivity
     reset();
     Log.d("Status", "App restarted");
 
+    // Every time onResume is called, the apps are indexed again.
+    Intent app_index_intent = new Intent(this, AppIndexService.class);
+    startService(app_index_intent);
+
+    // If we were not called from the widget, populate with the top apps for the
+    // moment.
     String starting_action = getIntent().getAction();
     if (starting_action != null &&
             (starting_action.equals(Intent.ACTION_MAIN) ||
@@ -114,10 +120,6 @@ public class MainActivity
       m_search_thread = new SearchMostUsedThread(this, this);
       m_search_thread.execute(MAX_TOP_APPS);
     }
-
-    // Every time onResume is called, the apps are indexed again.
-    Intent app_index_intent = new Intent(this, AppIndexService.class);
-    startService(app_index_intent);
 
     super.onResume();
   }
@@ -155,7 +157,7 @@ public class MainActivity
    *  If a search was still running, it is cancelled.
    *  @param query the list of characters to search for in an app name.
    */
-  private void doSearch(final String query) {  
+  private void doSearch(final String query) {
     if (query.length() > 0) {
       if (m_search_thread != null) {
         m_search_thread.cancel(true);

@@ -74,8 +74,10 @@ public class MainActivity
 
   @Override
   protected void onCreate(Bundle saved_instance) {
-    Log.d("Status", "App created");
-    super.onCreate(saved_instance);
+    // We actually never want to restore state, we should always come up as
+    // clean as possible, so we pass in null here.
+    super.onCreate(null);
+
     setContentView(R.layout.activity_main);
 
     // Attach the search system to the SearchView in the layout
@@ -128,14 +130,13 @@ public class MainActivity
     reset();
     Log.d("Status", "App restarted");
 
-    super.onResume();
 
     // Every time onResume is called, the apps are indexed again.
-    Log.d("AppSearch", "Starting the intent");
     Intent app_index_intent = new Intent(this, AppIndexService.class);
     startService(app_index_intent);
-    Log.d("AppSearch", "Intent started");
 
+    // If we were not called from the widget, populate with the top apps for the
+    // moment.
     String starting_action = getIntent().getAction();
     if (starting_action != null &&
             (starting_action.equals(Intent.ACTION_MAIN) ||
@@ -143,6 +144,8 @@ public class MainActivity
       m_search_thread = new SearchMostUsedThread(this, this);
       m_search_thread.execute(MAX_TOP_APPS);
     }
+
+    super.onResume();
   }
 
   @Override
@@ -159,10 +162,7 @@ public class MainActivity
   private void reset() {
     Log.d("Reset", "Resetting");
     // Clear results
-    AppArrayAdapter adapter = (AppArrayAdapter)m_results_view.getAdapter(); 
-    if (adapter != null) {
-      adapter.clear();
-    }
+    m_results_view.setAdapter(null);
     m_search_view.setQuery("", false);
     
     if (m_about_dialog != null) {
@@ -178,7 +178,7 @@ public class MainActivity
    *  If a search was still running, it is cancelled.
    *  @param query the list of characters to search for in an app name.
    */
-  private void doSearch(final String query) {  
+  private void doSearch(final String query) {
     if (query.length() > 0) {
       if (m_search_thread != null) {
         m_search_thread.cancel(true);

@@ -1,9 +1,6 @@
 package com.mrpi.appsearch;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 import android.app.IntentService;
@@ -33,8 +30,7 @@ import android.util.Log;
  * The apps are sorted according to popularity for this moment.
  */
 public class AppIndexService
-        extends IntentService
-        implements SearchThreadListener {
+        extends IntentService {
 
   public AppIndexService() {
     super("AppIndexService");
@@ -45,25 +41,38 @@ public class AppIndexService
     Log.d("AppSearch", "Updating app index");
 
     // Get the apps with known scores and wait for this process to finish.
-    SearchMostUsedThread search_thread = new SearchMostUsedThread(this, this);
+    // We used the SearchMostUsedThread here synchronously, which seems to be
+    // kind of defeating its purpose. But we're a background thread ourselves
+    // and can only stay that way if we handle things from this method (so no
+    // callback methods from the SearchThread allowed). So we use the class for
+    // what it does best, but in a bit different way.
+    ArrayList<AppData> popular_apps = null;
+    SearchMostUsedThread search_thread = new SearchMostUsedThread(this, null);
     search_thread.execute();
-  }
+    try {
+      popular_apps = search_thread.get();
+    } catch (Exception e) {
+      // For some reason, the search thread was interrupted before it could
+      // finish. In this case, we will just fill the database with live data.
+      Log.d("AppSearch", "Couldn't get a list of popular apps");
+    }
 
-  /** When the list of popular apps is created, we can continue with the
-   *  indexing process. */
-  public void onSearchThreadFinished(ArrayList<AppData> popular_apps,
-                                     Context context) {
     // Get the installed apps
     ArrayList<AppData> installed_apps = queryApps();
 
-    // Remove all entries in popular_apps from installed_apps and then append
-    // the result to popular_apps. This way, we get a list of all the apps
-    // sorted by popularity score.
-    installed_apps.removeAll(popular_apps);
-    popular_apps.addAll(installed_apps);
+    if (popular_apps != null) {
+      // Remove all entries in popular_apps from installed_apps and then append
+      // the result to popular_apps. This way, we get a list of all the apps
+      // sorted by popularity score.
+      installed_apps.removeAll(popular_apps);
+      popular_apps.addAll(installed_apps);
 
-    // Write back the result to the database
-    writeToDB(popular_apps);
+      // Write back the result to the database
+      writeToDB(popular_apps);
+    } else {
+      writeToDB(installed_apps);
+    }
+
   }
 
   /** Query the system for installed apps.

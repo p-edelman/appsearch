@@ -56,12 +56,13 @@ public class MostUsedWidget
   /** Set the updating of the widget display in motion.
    *  This method launches a SearchMostUsedThread to find the top apps. When it's
    *  done, the onSearchThreadFinished() method is called to handle the result.
-   *  @param context the applciation context for this widget */
+   *  @param context the application context for this widget */
   private void updateWidgetStart(Context context) {
     Log.d("Widget", "Updating app widget");
 
+    initializeFirstWidget(context);
     SearchMostUsedThread search_thread = new SearchMostUsedThread(context, this);
-    search_thread.execute(3);
+    search_thread.execute(0);
   }
 
   /** Set the icons in (all) the active widget(s) to the list that was found by
@@ -76,26 +77,17 @@ public class MostUsedWidget
 
     PackageManager package_manager = context.getPackageManager();
 
-    // For responding to touch, we first need to create an internal intent (that
-    // can be caught by onReceive()). Then we wrap this intent in a
-    // PendingIntent, that we can bind to an icon.
-    // Because the intents for all icons look the same (they only differ in the
-    // extra data), Android will not create a new PendingIntent object for each
-    // icon. Therefore, we need to set a different request code for all of them
-    // AND set the FLAG_UPDATE_CURRENT, which will update the current
-    // PendingIntent with the new intent.
-    Intent intent = new Intent(context, MostUsedWidget.class);
-    intent.setAction(ACTION_WIDGET_SEARCH);
-    PendingIntent pending_intent = PendingIntent.getBroadcast(context, -1, intent,
-                                                              PendingIntent.FLAG_UPDATE_CURRENT);
-    views.setOnClickPendingIntent(R.id.widget_icon_search, pending_intent);
-    views.setOnClickPendingIntent(R.id.widget_text_search, pending_intent);
+    // Get all the widget ids
+    ComponentName component  = new ComponentName(context, MostUsedWidget.class);
+    AppWidgetManager manager = AppWidgetManager.getInstance(context);
+    int[] widget_ids = manager.getAppWidgetIds(component);
 
     // Get the top apps and set them to the icons
     int app_num    = 0;
-    int drawn_apps = 0;
-    while(app_num < apps.size() && drawn_apps < 3) { // Safeguard for when apps from the database are uninstalled in the meantime
+    int widget_num = 1;
+    while(app_num < apps.size() && widget_num < widget_ids.length) { // Safeguard for when apps from the database are uninstalled in the meantime
       AppData app = apps.get(app_num);
+      Log.d("Widget", "Working on app " + app.name);
       try {
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
                                                                       PackageManager.GET_META_DATA);
@@ -103,33 +95,58 @@ public class MostUsedWidget
         // Set icon and name
         Resources resources = package_manager.getResourcesForApplication(app_info);
         Bitmap icon         = BitmapFactory.decodeResource(resources, app_info.icon);
-        int icon_id = context.getResources().getIdentifier("widget_icon_" + drawn_apps, "id", context.getPackageName());
-        int text_id = context.getResources().getIdentifier("widget_text_" + drawn_apps, "id", context.getPackageName());
-        views.setImageViewBitmap(icon_id, icon);
-        views.setTextViewText(text_id, app.name);
+        views.setImageViewBitmap(R.id.widget_icon, icon);
+        views.setTextViewText(R.id.widget_text, app.name);
 
-        // Set intent for when the user clicks
-        intent = new Intent(context, MostUsedWidget.class);
+        // For responding to touch, we first need to create an internal intent (that
+        // can be caught by onReceive()). Then we wrap this intent in a
+        // PendingIntent, that we can bind to an icon.
+        // Because the intents for all icons look the same (they only differ in the
+        // extra data), Android will not create a new PendingIntent object for each
+        // icon. Therefore, we need to set a different request code for all of them
+        // AND set the FLAG_UPDATE_CURRENT, which will update the current
+        // PendingIntent with the new intent.
+        Intent intent = new Intent(context, MostUsedWidget.class);
         intent.setAction(ACTION_WIDGET_ICON_CLICK);
         intent.putExtra("name",         app.name);
         intent.putExtra("package_name", app.package_name);
-        pending_intent = PendingIntent.getBroadcast(context, app_num, intent,
-                                                    PendingIntent.FLAG_UPDATE_CURRENT);
-        views.setOnClickPendingIntent(icon_id, pending_intent);
-        views.setOnClickPendingIntent(text_id, pending_intent);
+        PendingIntent pending_intent = PendingIntent.getBroadcast(context, app_num, intent,
+                                                                  PendingIntent.FLAG_UPDATE_CURRENT);
+        views.setOnClickPendingIntent(R.id.widget_icon, pending_intent);
+        views.setOnClickPendingIntent(R.id.widget_text, pending_intent);
 
-        drawn_apps++;
+        manager.updateAppWidget(widget_ids[widget_num], views);
+
+        widget_num++;
       } catch (PackageManager.NameNotFoundException e) {
         // App is not there anymore, by silently ignoring this we skip to the
         // next app in the list
       }
       app_num++;
     }
+  }
 
-    // Update all the widgets with the new view
-    ComponentName widget_id = new ComponentName(context, MostUsedWidget.class);
+  /** The first displayed widget is special, in that it always is the launcher
+   *  for the search app.
+   *  @param context the context that the widget runs in. */
+  private void initializeFirstWidget(Context context) {
+    // Instantiate the RemoteViews object for the app widget layout.
+    RemoteViews views = new RemoteViews(context.getPackageName(),
+                                        R.layout.most_used_widget);
+
+    Intent intent = new Intent(context, MostUsedWidget.class);
+    intent.setAction(ACTION_WIDGET_SEARCH);
+    PendingIntent pending_intent = PendingIntent.getBroadcast(context, -1, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT);
+    views.setOnClickPendingIntent(R.id.widget_icon, pending_intent);
+    views.setOnClickPendingIntent(R.id.widget_text, pending_intent);
+
+    ComponentName component  = new ComponentName(context, MostUsedWidget.class);
     AppWidgetManager manager = AppWidgetManager.getInstance(context);
-    manager.updateAppWidget(widget_id, views);
+    int[] widget_ids = manager.getAppWidgetIds(component);
+    if (widget_ids.length > 0) {
+      manager.updateAppWidget(widget_ids[0], views);
+    }
   }
 
   /** Called when the first widget is installed.

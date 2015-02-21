@@ -2,7 +2,8 @@
 <resources>
 
     <dimen name="dialog_margin">10dp</dimen>
-    <dimen name="widget_margin">8dp</dimen>
-    <dimen name="icon_padding">15dp</dimen>
+    <dimen name="widget_margin">0dp</dimen>
+    <dimen name="widget_icon_padding_portrait">0dp</dimen>
+    <dimen name="widget_icon_padding_landscape">0dp</dimen>
 
 </resources>

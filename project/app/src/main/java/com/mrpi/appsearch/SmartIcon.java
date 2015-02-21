@@ -12,6 +12,9 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -27,7 +30,7 @@ import java.util.Calendar;
  *  provides a mechanism for search AsyncTasks to communicate back their
  *  results. An update is performed by calling a SearchMostUsedThread and letting
  *  the onSearchThreadFinished() method update the widget display. */
-public class MostUsedWidget
+public class SmartIcon
         extends AppWidgetProvider
         implements SearchThreadListener {
 
@@ -73,14 +76,20 @@ public class MostUsedWidget
   public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
     // Instantiate the RemoteViews object for the app widget layout.
     RemoteViews views = new RemoteViews(context.getPackageName(),
-                                        R.layout.most_used_widget);
+                                        R.layout.smart_icon);
 
     PackageManager package_manager = context.getPackageManager();
 
     // Get all the widget ids
-    ComponentName component  = new ComponentName(context, MostUsedWidget.class);
+    ComponentName component  = new ComponentName(context, SmartIcon.class);
     AppWidgetManager manager = AppWidgetManager.getInstance(context);
     int[] widget_ids = manager.getAppWidgetIds(component);
+    Log.d("Widget", "We have " + widget_ids.length + " widgets");
+
+    int       icon_size        = (int)context.getResources().getDimension(android.R.dimen.app_icon_size);
+    Bitmap    search_icon      = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher);
+    Rect      canvas_rect      = new Rect(0, 0, icon_size, icon_size);
+    RectF     search_icon_rect = new RectF((float)(icon_size * 0.66), (float)(icon_size * 0.66), (float)icon_size, (float)icon_size);
 
     // Get the top apps and set them to the icons
     int app_num    = 0;
@@ -92,10 +101,20 @@ public class MostUsedWidget
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
                                                                       PackageManager.GET_META_DATA);
 
-        // Set icon and name
+        // Create canvas to draw on
+        Bitmap bitmap = Bitmap.createBitmap(icon_size, icon_size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+
+        // Add the app icon
         Resources resources = package_manager.getResourcesForApplication(app_info);
         Bitmap icon         = BitmapFactory.decodeResource(resources, app_info.icon);
-        views.setImageViewBitmap(R.id.widget_icon, icon);
+        canvas.drawBitmap(icon, null, canvas_rect, null);
+
+        // Add the search icon
+        canvas.drawBitmap(search_icon, null, search_icon_rect, null);
+
+        // Set icon and name
+        views.setImageViewBitmap(R.id.widget_icon, bitmap);
         views.setTextViewText(R.id.widget_text, app.name);
 
         // For responding to touch, we first need to create an internal intent (that
@@ -106,7 +125,7 @@ public class MostUsedWidget
         // icon. Therefore, we need to set a different request code for all of them
         // AND set the FLAG_UPDATE_CURRENT, which will update the current
         // PendingIntent with the new intent.
-        Intent intent = new Intent(context, MostUsedWidget.class);
+        Intent intent = new Intent(context, SmartIcon.class);
         intent.setAction(ACTION_WIDGET_ICON_CLICK);
         intent.putExtra("name",         app.name);
         intent.putExtra("package_name", app.package_name);
@@ -130,21 +149,29 @@ public class MostUsedWidget
    *  for the search app.
    *  @param context the context that the widget runs in. */
   private void initializeFirstWidget(Context context) {
+    Log.d("Widget", "Setting first widget");
+
     // Instantiate the RemoteViews object for the app widget layout.
     RemoteViews views = new RemoteViews(context.getPackageName(),
-                                        R.layout.most_used_widget);
+                                        R.layout.smart_icon);
 
-    Intent intent = new Intent(context, MostUsedWidget.class);
+    // Set icon and name
+    views.setImageViewResource(R.id.widget_icon, R.drawable.ic_launcher);
+    views.setTextViewText(R.id.widget_text, context.getString(R.string.app_name));
+
+    // Attach touch listener
+    Intent intent = new Intent(context, SmartIcon.class);
     intent.setAction(ACTION_WIDGET_SEARCH);
     PendingIntent pending_intent = PendingIntent.getBroadcast(context, -1, intent,
             PendingIntent.FLAG_UPDATE_CURRENT);
     views.setOnClickPendingIntent(R.id.widget_icon, pending_intent);
     views.setOnClickPendingIntent(R.id.widget_text, pending_intent);
 
-    ComponentName component  = new ComponentName(context, MostUsedWidget.class);
+    ComponentName component  = new ComponentName(context, SmartIcon.class);
     AppWidgetManager manager = AppWidgetManager.getInstance(context);
     int[] widget_ids = manager.getAppWidgetIds(component);
     if (widget_ids.length > 0) {
+      Log.d("Widget", "Setting widget " + widget_ids[0] + " as first widget");
       manager.updateAppWidget(widget_ids[0], views);
     }
   }
@@ -155,10 +182,11 @@ public class MostUsedWidget
    *  update all active widgets. */
   @Override
   public void onEnabled(Context context) {
+    Log.d("Widget", "Widget installment, enabling alarm manager");
     super.onEnabled(context);
 
     // Prepare an update intent to fire every five minutes to this class.
-    Intent intent = new Intent(context, MostUsedWidget.class);
+    Intent intent = new Intent(context, SmartIcon.class);
     intent.setAction(ACTION_WIDGET_UPDATE);
     PendingIntent pending_intent = PendingIntent.getBroadcast(context, 0, intent, 0);
 
@@ -181,7 +209,8 @@ public class MostUsedWidget
    *  AlarmManager. */
   @Override
   public void onDisabled(Context context) {
-    Intent intent                = new Intent(context, MostUsedWidget.class);
+    Log.d("Widget", "Last widget deleted, disabling alarm manager");
+    Intent intent                = new Intent(context, SmartIcon.class);
     PendingIntent pending_intent = PendingIntent.getBroadcast(context, 0, intent, 0);
     AlarmManager alarm_manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
     alarm_manager.cancel(pending_intent);

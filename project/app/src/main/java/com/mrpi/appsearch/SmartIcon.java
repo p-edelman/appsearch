@@ -38,7 +38,6 @@ public class SmartIcon
    *  architecture in Android, interacting with the widget is done via intents.
    *  We capture and handle them directly within this class. */
   public static String ACTION_WIDGET_ICON_CLICK = "ACTION_WIDGET_ICON_CLICK";
-  public static String ACTION_WIDGET_SEARCH     = "ACTION_WIDGET_SEARCH";
   public static String ACTION_WIDGET_UPDATE     = "ACTION_WIDGET_UPDATE";
 
   /** Called by the system each time the widget is updated. This actually
@@ -63,7 +62,6 @@ public class SmartIcon
   private void updateWidgetStart(Context context) {
     Log.d("Widget", "Updating app widget");
 
-    initializeFirstWidget(context);
     SearchMostUsedThread search_thread = new SearchMostUsedThread(context, this);
     search_thread.execute(0);
   }
@@ -93,7 +91,7 @@ public class SmartIcon
 
     // Get the top apps and set them to the icons
     int app_num    = 0;
-    int widget_num = 1;
+    int widget_num = 0;
     while(app_num < apps.size() && widget_num < widget_ids.length) { // Safeguard for when apps from the database are uninstalled in the meantime
       AppData app = apps.get(app_num);
       Log.d("Widget", "Working on app " + app.name);
@@ -142,37 +140,6 @@ public class SmartIcon
         // next app in the list
       }
       app_num++;
-    }
-  }
-
-  /** The first displayed widget is special, in that it always is the launcher
-   *  for the search app.
-   *  @param context the context that the widget runs in. */
-  private void initializeFirstWidget(Context context) {
-    Log.d("Widget", "Setting first widget");
-
-    // Instantiate the RemoteViews object for the app widget layout.
-    RemoteViews views = new RemoteViews(context.getPackageName(),
-                                        R.layout.smart_icon);
-
-    // Set icon and name
-    views.setImageViewResource(R.id.widget_icon, R.drawable.ic_launcher);
-    views.setTextViewText(R.id.widget_text, context.getString(R.string.app_name));
-
-    // Attach touch listener
-    Intent intent = new Intent(context, SmartIcon.class);
-    intent.setAction(ACTION_WIDGET_SEARCH);
-    PendingIntent pending_intent = PendingIntent.getBroadcast(context, -1, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT);
-    views.setOnClickPendingIntent(R.id.widget_icon, pending_intent);
-    views.setOnClickPendingIntent(R.id.widget_text, pending_intent);
-
-    ComponentName component  = new ComponentName(context, SmartIcon.class);
-    AppWidgetManager manager = AppWidgetManager.getInstance(context);
-    int[] widget_ids = manager.getAppWidgetIds(component);
-    if (widget_ids.length > 0) {
-      Log.d("Widget", "Setting widget " + widget_ids[0] + " as first widget");
-      manager.updateAppWidget(widget_ids[0], views);
     }
   }
 
@@ -226,11 +193,6 @@ public class SmartIcon
     if (intent.getAction().equals(ACTION_WIDGET_UPDATE)) {
       Log.d("Widget", "Received an alarm schedule to update");
       updateWidgetStart(context);
-    } else if (intent.getAction().equals(ACTION_WIDGET_SEARCH)) {
-      // Open the search app
-      Intent launch_intent = new Intent(context, MainActivity.class);
-      launch_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      context.startActivity(launch_intent);
     } else if (intent.getAction().equals(ACTION_WIDGET_ICON_CLICK)) {
       // One of the app icons was clicked
       final String name = intent.getStringExtra("name");

@@ -3,5 +3,6 @@
                     android:minWidth="40dp"
                     android:minHeight="40dp"
                     android:updatePeriodMillis="0"
-                    android:initialLayout="@layout/smart_icon">
+                    android:initialLayout="@layout/search_button"
+                    android:widgetCategory="home_screen">
 </appwidget-provider>

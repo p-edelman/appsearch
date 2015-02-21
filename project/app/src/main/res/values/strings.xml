@@ -9,5 +9,7 @@
     <string name="please_wait">Please wait</string>
     <string name="smart_icon">Smart icon</string>
     <string name="no_app_name">Nothing yet</string>
+    <string name="search_button">Search Button</string>
+    <string name="search_button_label">Find apps</string>
 
 </resources>

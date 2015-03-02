@@ -6,15 +6,14 @@
               android:padding="@dimen/widget_margin"
               android:orientation="vertical"
               android:baselineAligned="false"
-              android:background="@drawable/smart_icon_background"
               android:gravity="center_vertical">
 
   <ImageButton
-      android:layout_width="@android:dimen/app_icon_size"
+      android:layout_width="match_parent"
       android:layout_height="@android:dimen/app_icon_size"
       android:id="@+id/widget_icon"
       android:layout_gravity="center_horizontal"
-      android:src="@drawable/ic_launcher"
+      android:src="@android:drawable/ic_delete"
       android:scaleType="centerInside"
       android:background="?android:selectableItemBackground" />
 
@@ -24,7 +23,7 @@
       android:id="@+id/widget_text"
       android:layout_gravity="center_horizontal"
       android:gravity="center_horizontal"
-      android:text="@string/search_button_label"
+      android:text="@string/no_app_name"
       style="@android:style/TextAppearance.DeviceDefault.Small"
       android:shadowColor="@android:color/black"
       android:shadowDx="3"

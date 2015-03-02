@@ -216,6 +216,10 @@ public class MainActivity
       m_about_dialog.show(fm, "dialog_about");
 
       return true;
+    } else if (item.getItemId() == R.id.menu_smart_icon_settings) {
+      Intent settings_intent = new Intent(this, SmartIconConfig.class);
+      startActivity(settings_intent);
+      finish();
     }
     return super.onOptionsItemSelected(item);
   }

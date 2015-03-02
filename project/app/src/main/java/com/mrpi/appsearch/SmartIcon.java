@@ -7,14 +7,13 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Rect;
-import android.graphics.RectF;
+
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -40,6 +39,11 @@ public class SmartIcon
   public static String ACTION_WIDGET_ICON_CLICK = "ACTION_WIDGET_ICON_CLICK";
   public static String ACTION_WIDGET_UPDATE     = "ACTION_WIDGET_UPDATE";
 
+  /** Constants for the preferences. */
+  public final static String SMART_ICON_PREFERENCES = "PreferencesSmartIcon";
+  public final static String SMART_ICON_LAYOUT      = "SMART_ICON_LAYOUT";
+  public final static String SMART_ICON_CONFIG_SHOW = "SMART_ICON_CONFIG_SHOW";
+
   /** Called by the system each time the widget is updated. This actually
    *  happens only once, the very first time the widget is instantiated. From
    *  this time on, an AlarmManager runs to update the widget every five
@@ -53,6 +57,15 @@ public class SmartIcon
                        int[]            widget_ids) {
     updateWidgetStart(context);
     super.onUpdate(context, widget_manager, widget_ids);
+
+    // Open the configuration dialog, if the user hasn't disabled it
+    SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
+                                                                 Context.MODE_MULTI_PROCESS);
+    if (preferences.getBoolean(SMART_ICON_CONFIG_SHOW, true)) {
+      Intent launch_intent = new Intent(context, SmartIconConfig.class);
+      launch_intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      context.startActivity(launch_intent);
+    }
   }
 
   /** Set the updating of the widget display in motion.
@@ -73,8 +86,15 @@ public class SmartIcon
    *                 SearchMostUsedThread. */
   public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
     // Instantiate the RemoteViews object for the app widget layout.
+    SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
+                                                                 Context.MODE_MULTI_PROCESS);
+    int layout_index  = preferences.getInt(SMART_ICON_LAYOUT, 0);
+    String layout_str = context.getResources().getStringArray(R.array.smart_icon_layouts_resource_names)[layout_index];
+    int layout_id     = context.getResources().getIdentifier(layout_str, "layout",
+                                                              context.getPackageName());
+    Log.d("Widget", "Using layout " + layout_str);
     RemoteViews views = new RemoteViews(context.getPackageName(),
-                                        R.layout.smart_icon);
+                                        layout_id);
 
     PackageManager package_manager = context.getPackageManager();
 
@@ -82,12 +102,6 @@ public class SmartIcon
     ComponentName component  = new ComponentName(context, SmartIcon.class);
     AppWidgetManager manager = AppWidgetManager.getInstance(context);
     int[] widget_ids = manager.getAppWidgetIds(component);
-    Log.d("Widget", "We have " + widget_ids.length + " widgets");
-
-    int       icon_size        = (int)context.getResources().getDimension(android.R.dimen.app_icon_size);
-    Bitmap    search_icon      = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher);
-    Rect      canvas_rect      = new Rect(0, 0, icon_size, icon_size);
-    RectF     search_icon_rect = new RectF((float)(icon_size * 0.66), (float)(icon_size * 0.66), (float)icon_size, (float)icon_size);
 
     // Get the top apps and set them to the icons
     int app_num    = 0;
@@ -96,23 +110,14 @@ public class SmartIcon
       AppData app = apps.get(app_num);
       Log.d("Widget", "Working on app " + app.name);
       try {
+        // Get the app icon
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
                                                                       PackageManager.GET_META_DATA);
-
-        // Create canvas to draw on
-        Bitmap bitmap = Bitmap.createBitmap(icon_size, icon_size, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-
-        // Add the app icon
         Resources resources = package_manager.getResourcesForApplication(app_info);
         Bitmap icon         = BitmapFactory.decodeResource(resources, app_info.icon);
-        canvas.drawBitmap(icon, null, canvas_rect, null);
-
-        // Add the search icon
-        canvas.drawBitmap(search_icon, null, search_icon_rect, null);
 
         // Set icon and name
-        views.setImageViewBitmap(R.id.widget_icon, bitmap);
+        views.setImageViewBitmap(R.id.widget_icon, icon);
         views.setTextViewText(R.id.widget_text, app.name);
 
         // For responding to touch, we first need to create an internal intent (that
@@ -128,7 +133,7 @@ public class SmartIcon
         intent.putExtra("name",         app.name);
         intent.putExtra("package_name", app.package_name);
         PendingIntent pending_intent = PendingIntent.getBroadcast(context, app_num, intent,
-                                                                  PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent.FLAG_UPDATE_CURRENT);
         views.setOnClickPendingIntent(R.id.widget_icon, pending_intent);
         views.setOnClickPendingIntent(R.id.widget_text, pending_intent);
 
@@ -191,7 +196,7 @@ public class SmartIcon
   @Override
   public void onReceive(Context context, Intent intent) {
     if (intent.getAction().equals(ACTION_WIDGET_UPDATE)) {
-      Log.d("Widget", "Received an alarm schedule to update");
+      Log.d("Widget", "Received a signal to update");
       updateWidgetStart(context);
     } else if (intent.getAction().equals(ACTION_WIDGET_ICON_CLICK)) {
       // One of the app icons was clicked

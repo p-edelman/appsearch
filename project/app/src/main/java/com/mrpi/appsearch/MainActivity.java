@@ -219,7 +219,9 @@ public class MainActivity
     } else if (item.getItemId() == R.id.menu_smart_icon_settings) {
       Intent settings_intent = new Intent(this, SmartIconConfig.class);
       startActivity(settings_intent);
-      finish();
+      finish(); // We need to hide the main activity to show the configuration
+                // dialog on the home screen, so the user can actually see what
+                // happens to the icons.
     }
     return super.onOptionsItemSelected(item);
   }

@@ -27,7 +27,6 @@
             android:launchMode="singleTop" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
@@ -46,7 +45,6 @@
             -->
             <intent-filter>
                 <action android:name="android.intent.action.ASSIST" />
-
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
@@ -99,7 +97,8 @@
 
         <activity android:name=".SmartIconConfig"
                   android:label="@string/smart_icon_config_title"
-                  android:theme="@android:style/Theme.Holo.Dialog">
+                  android:theme="@style/theme_config_dialog"
+                  android:launchMode="singleInstance">
         </activity>
     </application>
 

@@ -5,12 +5,15 @@ import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
@@ -58,14 +61,8 @@ public class SmartIcon
     updateWidgetStart(context);
     super.onUpdate(context, widget_manager, widget_ids);
 
-    // Open the configuration dialog, if the user hasn't disabled it
-    SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
-                                                                 Context.MODE_MULTI_PROCESS);
-    if (preferences.getBoolean(SMART_ICON_CONFIG_SHOW, true)) {
-      Intent launch_intent = new Intent(context, SmartIconConfig.class);
-      launch_intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      context.startActivity(launch_intent);
-    }
+    // See if we should configure a widget
+    configureWidget(widget_ids, context);
   }
 
   /** Set the updating of the widget display in motion.
@@ -172,7 +169,7 @@ public class SmartIcon
     time.set(Calendar.SECOND, 1);
     time.set(Calendar.MILLISECOND, 0);
 
-    // Now set the alarmmanager to reapeat every five minutes.
+    // Now set the alarmmanager to repeat every five minutes.
     AlarmManager alarm_manager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
     alarm_manager.setRepeating(AlarmManager.RTC, time.getTimeInMillis(), 5 * 60 * 1000, pending_intent);
   }
@@ -213,6 +210,65 @@ public class SmartIcon
       context.startActivity(launch_intent);
     } else {
       super.onReceive(context, intent);
+    }
+  }
+
+  /** Check the database if there are unconfigured widgets and if so, make sure
+   *  it is configured; the widget_id is set to congigured in the database and
+   *  the configuration widget is launched (unless this has been disabled by a
+   *  user setting).
+   *  @param widget_ids the current list of ids for active widgets
+   *  @param context the context in which this class runs. */
+  private void configureWidget(int[] widget_ids,
+                               Context context) {
+
+    DBHelper db_helper = DBHelper.getInstance(context);
+    SQLiteDatabase db;
+
+    // See if there are id's in the list that, according to the database,
+    // haven't been configured.
+    Integer unconfigured_id = null;
+    db = db_helper.getReadableDatabase();
+    for (int widget_id: widget_ids) {
+      Cursor cursor = db.query(DBHelper.TBL_WIDGET_IDS, new String[]{"widget_id"},
+                               "widget_id=?", new String[]{Integer.toString(widget_id)},
+                               null, null, null, null);
+      if (cursor.getCount() == 0) {
+        unconfigured_id = widget_id;
+        break;
+      }
+    }
+
+    // If we have an unconfigured widget, save it as being configured (even if
+    // we don't show the dialog; it's configured with the default settings
+    // then).
+    if (unconfigured_id != null) {
+      db = db_helper.getWritableDatabase();
+      ContentValues values = new ContentValues();
+      values.put("widget_id", unconfigured_id);
+      db.insert(DBHelper.TBL_WIDGET_IDS, null, values);
+
+      // Open the configuration dialog, if the user hasn't disabled it
+      SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
+                                                                   Context.MODE_MULTI_PROCESS);
+      if (preferences.getBoolean(SMART_ICON_CONFIG_SHOW, true)) {
+        Intent launch_intent = new Intent(context, SmartIconConfig.class);
+        launch_intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(launch_intent);
+      }
+    }
+  }
+
+  @Override
+  public void onDeleted(Context context,
+                        int[] widget_ids) {
+    // Since we're saving the id of each configured widget, we have to remove
+    // them from the settings when it is deleted.
+    DBHelper db_helper = DBHelper.getInstance(context);
+    for (int widget_id: widget_ids) {
+      SQLiteDatabase db = db_helper.getWritableDatabase();
+      String[] where_args = {Integer.toString(widget_id)};
+      db.delete(DBHelper.TBL_WIDGET_IDS, "widget_id=?", where_args);
     }
   }
 }

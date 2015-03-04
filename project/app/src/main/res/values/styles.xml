@@ -18,12 +18,13 @@
   </style>
 
   <!-- Special theme for the smart icon configuration activity, that makes it
-       appear as a dialog without dimmed background, so the user can see the
-       change to the icon layout happening. -->
+       appear as a dialog with only minimal background dimming, so the user can
+       see the change to the icon layout happening. -->
   <style name="theme_config_dialog" parent="android:Theme.Holo.Dialog">
     <item name="android:windowIsTranslucent">true</item>
     <item name="android:windowContentOverlay">@null</item>
     <item name="android:windowIsFloating">true</item>
-    <item name="android:backgroundDimEnabled">false</item>
+    <item name="android:backgroundDimEnabled">true</item>
+    <item name="android:backgroundDimAmount">0.25</item>
   </style>
 </resources>

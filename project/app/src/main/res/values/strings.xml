@@ -17,6 +17,7 @@
   <string name="menu_smart_icon_settings">Smart icon settings</string>
   <string name="smart_icon_config_title">Choose a layout</string>
   <string name="dont_show_again">Don\'t show upon creation</string>
+  <string name="show_again">Show upon creation</string>
 
   <!-- The different options for the layout of a smart icon. It is important
        that the arrays smart_icon_layouts_public_names is matched to the array

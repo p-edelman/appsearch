@@ -61,18 +61,23 @@ public class SmartIconConfig extends Activity {
     });
 
     // Handle the checkbox
-    CheckBox dont_repeat_box = (CheckBox)findViewById(R.id.dont_repeat_checkbox);
-    dont_repeat_box.setChecked(!preferences.getBoolean(SmartIcon.SMART_ICON_CONFIG_SHOW, true));
-    dont_repeat_box.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+    final CheckBox repeat_box = (CheckBox)findViewById(R.id.repeat_checkbox);
+    repeat_box.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
       @Override
       public void onCheckedChanged(CompoundButton compound_button,
                                    boolean        checked) {
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean(SmartIcon.SMART_ICON_CONFIG_SHOW,
-                          !checked);
-        editor.apply();
+      if (checked) {
+        repeat_box.setText(R.string.show_again);
+      } else {
+        repeat_box.setText(R.string.dont_show_again);
+      }
+      SharedPreferences.Editor editor = preferences.edit();
+      editor.putBoolean(SmartIcon.SMART_ICON_CONFIG_SHOW,
+                        checked);
+      editor.apply();
       }
     });
+    repeat_box.setChecked(preferences.getBoolean(SmartIcon.SMART_ICON_CONFIG_SHOW, true));
 
     // The close button dismisses the "dialog".
     Button dismiss_button = (Button)findViewById(R.id.dismiss_button);

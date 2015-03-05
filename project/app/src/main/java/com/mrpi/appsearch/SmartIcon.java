@@ -73,7 +73,9 @@ public class SmartIcon
     Log.d("Widget", "Updating app widget");
 
     SearchMostUsedThread search_thread = new SearchMostUsedThread(context, this);
-    search_thread.execute(0);
+    ComponentName component            = new ComponentName(context, SmartIcon.class);
+    AppWidgetManager manager           = AppWidgetManager.getInstance(context);
+    search_thread.execute(manager.getAppWidgetIds(component).length);
   }
 
   /** Set the icons in (all) the active widget(s) to the list that was found by

@@ -5,14 +5,12 @@ import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -45,6 +43,10 @@ public class SmartIcon
   /** Constants for the preferences. */
   public final static String SMART_ICON_PREFERENCES = "PreferencesSmartIcon";
   public final static String SMART_ICON_LAYOUT      = "SMART_ICON_LAYOUT";
+  public final static String ICON_SIZE              = "ICON_SIZE";
+  public final static String ICON_PADDING           = "ICON_PADDING";
+  public final static String TEXT_SIZE              = "TEXT_SIZE";
+  public final static String TEXT_PADDING           = "TEXT_PADDING";
   public final static String SMART_ICON_CONFIG_SHOW = "SMART_ICON_CONFIG_SHOW";
 
   /** Called by the system each time the widget is updated. This actually
@@ -60,9 +62,6 @@ public class SmartIcon
                        int[]            widget_ids) {
     updateWidgetStart(context);
     super.onUpdate(context, widget_manager, widget_ids);
-
-    // See if we should configure a widget
-    configureWidget(widget_ids, context);
   }
 
   /** Set the updating of the widget display in motion.
@@ -85,18 +84,13 @@ public class SmartIcon
    *                 SearchMostUsedThread. */
   public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
     // Instantiate the RemoteViews object for the app widget layout.
-    SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
-                                                                 Context.MODE_MULTI_PROCESS);
-    int layout_index  = preferences.getInt(SMART_ICON_LAYOUT, 0);
-    String layout_str = context.getResources().getStringArray(R.array.smart_icon_layouts_resource_names)[layout_index];
-    int layout_id     = context.getResources().getIdentifier(layout_str, "layout",
-                                                              context.getPackageName());
-    Log.d("Widget", "Using layout " + layout_str);
     RemoteViews views = new RemoteViews(context.getPackageName(),
-                                        layout_id);
+                                        R.layout.smart_icon);
 
     PackageManager package_manager = context.getPackageManager();
 
+    SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
+                                                                 Context.MODE_MULTI_PROCESS);
     // Get all the widget ids
     ComponentName component  = new ComponentName(context, SmartIcon.class);
     AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -110,13 +104,27 @@ public class SmartIcon
       Log.d("Widget", "Working on app " + app.name);
       try {
         // Get the app icon
+        int icon_size = preferences.getInt(SmartIcon.ICON_SIZE,
+                                           android.R.dimen.app_icon_size);
+        float text_size = preferences.getFloat(SmartIcon.TEXT_SIZE,
+                R.dimen.smart_icon_text_size_default);
+        int icon_padding = preferences.getInt(SmartIcon.ICON_PADDING, 0);
+        int text_padding = preferences.getInt(SmartIcon.TEXT_PADDING, 0);
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
                                                                       PackageManager.GET_META_DATA);
         Resources resources = package_manager.getResourcesForApplication(app_info);
-        Bitmap icon         = BitmapFactory.decodeResource(resources, app_info.icon);
+        Bitmap icon_raw     = BitmapFactory.decodeResource(resources, app_info.icon);
+        Bitmap icon_scaled  = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, false);
 
-        // Set icon and name
-        views.setImageViewBitmap(R.id.widget_icon, icon);
+        // Adjust the label parameters
+        views.setFloat(R.id.widget_text, "setTextSize", text_size);
+
+        // Adjust the spacing
+        views.setViewPadding(R.id.widget_icon, 0, icon_padding, 0, 0);
+        views.setViewPadding(R.id.widget_text, 0, text_padding, 0, 0);
+
+        // Set icon and label
+        views.setImageViewBitmap(R.id.widget_icon, icon_scaled);
         views.setTextViewText(R.id.widget_text, app.name);
 
         // For responding to touch, we first need to create an internal intent (that
@@ -174,6 +182,11 @@ public class SmartIcon
     // Now set the alarmmanager to repeat every five minutes.
     AlarmManager alarm_manager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
     alarm_manager.setRepeating(AlarmManager.RTC, time.getTimeInMillis(), 5 * 60 * 1000, pending_intent);
+
+    // Configure the widget
+    Intent launch_intent = new Intent(context, SmartIconConfig.class);
+    launch_intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    context.startActivity(launch_intent);
   }
 
   /** Called when all widgets are removed. This method cancels the running
@@ -212,52 +225,6 @@ public class SmartIcon
       context.startActivity(launch_intent);
     } else {
       super.onReceive(context, intent);
-    }
-  }
-
-  /** Check the database if there are unconfigured widgets and if so, make sure
-   *  it is configured; the widget_id is set to congigured in the database and
-   *  the configuration widget is launched (unless this has been disabled by a
-   *  user setting).
-   *  @param widget_ids the current list of ids for active widgets
-   *  @param context the context in which this class runs. */
-  private void configureWidget(int[] widget_ids,
-                               Context context) {
-
-    DBHelper db_helper = DBHelper.getInstance(context);
-    SQLiteDatabase db;
-
-    // See if there are id's in the list that, according to the database,
-    // haven't been configured.
-    Integer unconfigured_id = null;
-    db = db_helper.getReadableDatabase();
-    for (int widget_id: widget_ids) {
-      Cursor cursor = db.query(DBHelper.TBL_WIDGET_IDS, new String[]{"widget_id"},
-                               "widget_id=?", new String[]{Integer.toString(widget_id)},
-                               null, null, null, null);
-      if (cursor.getCount() == 0) {
-        unconfigured_id = widget_id;
-        break;
-      }
-    }
-
-    // If we have an unconfigured widget, save it as being configured (even if
-    // we don't show the dialog; it's configured with the default settings
-    // then).
-    if (unconfigured_id != null) {
-      db = db_helper.getWritableDatabase();
-      ContentValues values = new ContentValues();
-      values.put("widget_id", unconfigured_id);
-      db.insert(DBHelper.TBL_WIDGET_IDS, null, values);
-
-      // Open the configuration dialog, if the user hasn't disabled it
-      SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
-                                                                   Context.MODE_MULTI_PROCESS);
-      if (preferences.getBoolean(SMART_ICON_CONFIG_SHOW, true)) {
-        Intent launch_intent = new Intent(context, SmartIconConfig.class);
-        launch_intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        context.startActivity(launch_intent);
-      }
     }
   }
 

@@ -19,22 +19,9 @@
   <string name="dont_show_again">Don\'t show upon creation</string>
   <string name="show_again">Show upon creation</string>
 
-  <!-- The different options for the layout of a smart icon. It is important
-       that the arrays smart_icon_layouts_public_names is matched to the array
-       smart_icon_layouts_resource_names; each entry with a public name should
-       be matched to a layout resource. -->
-  <string name="smart_icon_default">Button (default)</string>
-  <string name="smart_icon_touchwiz">Samsung Touchwiz</string>
-  <string name="smart_icon_xperia">Sony XPeria</string>
-  <string-array name="smart_icon_layouts_public_names">
-    <item>@string/smart_icon_default</item>
-    <item>@string/smart_icon_touchwiz</item>
-    <item>@string/smart_icon_xperia</item>
-  </string-array>
-  <string-array name="smart_icon_layouts_resource_names">
-    <item>smart_icon</item>
-    <item>smart_icon_touchwiz</item>
-    <item>smart_icon_xperia</item>
-  </string-array>
+  <string name="label_text">Label</string>
+  <string name="bold_check">b</string>
+  <string name="italic_check">i</string>
+  <string name="shadow_check">s</string>
 
 </resources>

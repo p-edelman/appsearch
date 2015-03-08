@@ -7,11 +7,11 @@
                     android:orientation="vertical"
                     android:baselineAligned="false"
                     android:background="@drawable/smart_icon_background"
-                    android:gravity="center_vertical">
+                    android:gravity="top">
 
   <ImageButton
-      android:layout_width="@android:dimen/app_icon_size"
-      android:layout_height="@android:dimen/app_icon_size"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
       android:id="@+id/widget_icon"
       android:layout_gravity="center_horizontal"
       android:src="@android:drawable/ic_delete"
@@ -30,7 +30,6 @@
       android:shadowDx="3"
       android:shadowDy="3"
       android:shadowRadius="1"
-      android:textColor="@android:color/white"
-      />
+      android:textColor="@android:color/white"/>
 
 </LinearLayout>

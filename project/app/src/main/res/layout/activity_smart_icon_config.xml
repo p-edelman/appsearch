@@ -8,23 +8,32 @@
                 android:paddingBottom="@dimen/activity_vertical_margin"
                 tools:context="com.mrpi.appsearch.SmartIconConfig">
 
-  <Spinner
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:id="@+id/layout_spinner"
+  <LinearLayout
+      android:orientation="vertical"
+      android:layout_width="fill_parent"
+      android:layout_height="140dp"
+      android:layout_alignParentLeft="false"
+      android:id="@+id/config_icon_box"
       android:layout_alignParentTop="true"
-      android:layout_alignParentLeft="true"
-      android:layout_alignParentStart="true"/>
+      android:layout_centerHorizontal="true"
+      android:paddingTop="25dp"
+      android:paddingBottom="25dp">
 
-  <CheckBox
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="@string/show_again"
-      android:id="@+id/repeat_checkbox"
-      android:checked="true"
-      android:layout_alignParentStart="true"
-      android:layout_below="@+id/layout_spinner"
-      android:layout_alignBottom="@+id/dismiss_button"/>
+    <ImageView
+        android:layout_width="@android:dimen/app_icon_size"
+        android:layout_height="@android:dimen/app_icon_size"
+        android:id="@+id/config_icon"
+        android:layout_gravity="center_horizontal"
+        android:src="@drawable/ic_launcher"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/label_text"
+        android:id="@+id/config_text"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center_horizontal"/>
+  </LinearLayout>
 
   <Button
       android:layout_width="wrap_content"
@@ -33,7 +42,34 @@
       android:id="@+id/dismiss_button"
       style="@android:style/Holo.SegmentedButton"
       android:layout_gravity="right"
-      android:layout_alignParentEnd="true"
-      android:layout_below="@+id/layout_spinner"/>
+      android:layout_alignParentRight="true"
+      android:layout_alignBottom="@+id/config_icon_box"/>
+
+  <CheckBox
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/bold_check"
+      android:id="@+id/bold_checkbox"
+      android:layout_alignParentLeft="true"
+      android:textStyle="bold"
+      android:layout_alignParentStart="true"
+      android:layout_above="@+id/italic_checkbox"/>
+
+  <CheckBox
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/italic_check"
+      android:id="@+id/italic_checkbox"
+      android:textStyle="italic"
+      android:layout_alignParentStart="true"
+      android:layout_above="@+id/shadow_checkbox"/>
+
+  <CheckBox
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/shadow_check"
+      android:id="@+id/shadow_checkbox"
+      android:layout_alignParentStart="true"
+      android:layout_alignBottom="@+id/dismiss_button"/>
 
 </RelativeLayout>

@@ -201,7 +201,7 @@ public class SmartIconConfig extends Activity {
   private class ScaleListener
           implements ScaleGestureDetector.OnScaleGestureListener {
 
-    final float max_icon_size_f = (float)getResources().getDimensionPixelSize(R.dimen.widget_cell_size);
+    final float max_icon_size_f = (float)getResources().getDimensionPixelSize(R.dimen.approx_widget_cell_width);
     final float max_text_size   = getResources().getDimensionPixelSize(R.dimen.smart_icon_text_size_max);
 
     @Override

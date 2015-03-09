@@ -109,6 +109,17 @@ public class SmartIcon
       views.setInt(R.id.widget_container, "setBackgroundResource", 0);
     }
 
+    // Adjust the spacing
+    int icon_padding = preferences.getInt(SmartIcon.ICON_PADDING, 0);
+    int text_padding = preferences.getInt(SmartIcon.TEXT_PADDING, 0);
+    views.setViewPadding(R.id.widget_icon, 0, icon_padding, 0, 0);
+    views.setViewPadding(R.id.widget_text, 0, text_padding, 0, 0);
+
+    // Set text size
+    float text_size = preferences.getFloat(SmartIcon.TEXT_SIZE,
+            R.dimen.smart_icon_text_size_default);
+    views.setFloat(R.id.widget_text, "setTextSize", text_size);
+
     // Get all the widget ids
     ComponentName component  = new ComponentName(context, SmartIcon.class);
     AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -123,9 +134,7 @@ public class SmartIcon
       try {
         // Set the app icon
         int icon_size = preferences.getInt(SmartIcon.ICON_SIZE,
-                                           android.R.dimen.app_icon_size);
-        int icon_padding = preferences.getInt(SmartIcon.ICON_PADDING, 0);
-        int text_padding = preferences.getInt(SmartIcon.TEXT_PADDING, 0);
+                android.R.dimen.app_icon_size);
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
                                                                       PackageManager.GET_META_DATA);
         Resources resources = package_manager.getResourcesForApplication(app_info);
@@ -133,10 +142,7 @@ public class SmartIcon
         Bitmap icon_scaled  = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, true);
         views.setImageViewBitmap(R.id.widget_icon, icon_scaled);
 
-        // Adjust the label parameters
-        float text_size = preferences.getFloat(SmartIcon.TEXT_SIZE,
-                R.dimen.smart_icon_text_size_default);
-        views.setFloat(R.id.widget_text, "setTextSize", text_size);
+        // Set the label
         Spannable spannable = new SpannableString(app.name);
         if (preferences.getBoolean(TEXT_BOLD, false)) {
           spannable.setSpan(new StyleSpan(Typeface.BOLD), 0, app.name.length(), 0);
@@ -145,13 +151,6 @@ public class SmartIcon
           spannable.setSpan(new StyleSpan(Typeface.ITALIC), 0, app.name.length(), 0);
         }
         views.setTextViewText(R.id.widget_text, spannable);
-
-        // Adjust the spacing
-        views.setViewPadding(R.id.widget_icon, 0, icon_padding, 0, 0);
-        views.setViewPadding(R.id.widget_text, 0, text_padding, 0, 0);
-
-        // Set icon and label
-//        views.setTextViewText(R.id.widget_text, app.name);
 
         // For responding to touch, we first need to create an internal intent (that
         // can be caught by onReceive()). Then we wrap this intent in a

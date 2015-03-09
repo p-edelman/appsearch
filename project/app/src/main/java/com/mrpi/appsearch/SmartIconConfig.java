@@ -15,6 +15,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.google.android.maps.MapView;
@@ -27,9 +28,10 @@ public class SmartIconConfig extends Activity {
   /** The SharedPreferences object for all the smart icon preferences. */
   SharedPreferences m_preferences;
 
-  /** The icon and text parts of the smart icon. */
-  ImageView m_icon;
-  TextView  m_text;
+  /** The parts that make up the smart icon. */
+  LinearLayout m_box;
+  ImageView    m_icon;
+  TextView     m_text;
 
   /** These parameters define the layout. */
   private float   m_icon_size_f; // As a float for calculations, but it gets converted to int to actually use it
@@ -38,6 +40,7 @@ public class SmartIconConfig extends Activity {
   private boolean m_is_italic;
   private int     m_icon_padding;
   private int     m_text_padding;
+  private boolean m_has_background;
 
   /** We need to keep track of which element we're working on when zooming and
    *  dragging. */
@@ -47,12 +50,17 @@ public class SmartIconConfig extends Activity {
   /** We also need to keep track of which gesture is being performed. */
   private enum Motion {NONE, DRAG, ZOOM}
 
+  /** We need to know the offset of the icon within the widget. */
+  private int x_offset;
+  private int y_offset;
+
   @Override
   protected void onCreate(Bundle saved_state) {
     super.onCreate(saved_state);
     setContentView(R.layout.activity_smart_icon_config);
 
     // Initialize the UI components with their parameters
+    m_box  = (LinearLayout)findViewById(R.id.icon_box);
     m_icon = (ImageView)findViewById(R.id.config_icon);
     m_text = (TextView)findViewById(R.id.config_text);
 
@@ -62,10 +70,12 @@ public class SmartIconConfig extends Activity {
             getResources().getDimensionPixelSize(android.R.dimen.app_icon_size));
     m_text_size = m_preferences.getFloat(SmartIcon.TEXT_SIZE,
             getResources().getDimensionPixelSize(R.dimen.smart_icon_text_size_default));
-    m_icon_padding = m_preferences.getInt(SmartIcon.ICON_PADDING, 0);
-    m_text_padding = m_preferences.getInt(SmartIcon.TEXT_PADDING, 0);
-    m_is_bold      = m_preferences.getBoolean(SmartIcon.TEXT_BOLD, false);
-    m_is_italic    = m_preferences.getBoolean(SmartIcon.TEXT_ITALIC, false);
+    m_icon_padding   = m_preferences.getInt(SmartIcon.ICON_PADDING, 0);
+    m_text_padding   = m_preferences.getInt(SmartIcon.TEXT_PADDING, 0);
+    m_is_bold        = m_preferences.getBoolean(SmartIcon.TEXT_BOLD, false);
+    m_is_italic      = m_preferences.getBoolean(SmartIcon.TEXT_ITALIC, false);
+    m_has_background = m_preferences.getBoolean(SmartIcon.HAS_BACKGROUND, true);
+    renderBox();
     renderIcon();
     renderText();
 
@@ -92,12 +102,23 @@ public class SmartIconConfig extends Activity {
       }
     });
 
+    final CheckBox background_check = (CheckBox)findViewById(R.id.background_checkbox);
+    background_check.setChecked(m_has_background);
+    background_check.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+      @Override
+      public void onCheckedChanged(CompoundButton button_view, boolean is_checked) {
+        m_has_background = is_checked;
+        renderBox();
+        updateWidgets();
+      }
+    });
+
     // Attach movement listeners to the general, outer box (so we can detect
     // pinch gestures all over the window instead of only the elements
     // themselves).
-    final LinearLayout box = (LinearLayout) findViewById(R.id.config_icon_box);
+    RelativeLayout widget = (RelativeLayout)findViewById(R.id.widget);
     ScaleGestureDetector scale_detector = new ScaleGestureDetector(this, new ScaleListener());
-    box.setOnTouchListener(new TouchListener(scale_detector));
+    widget.setOnTouchListener(new TouchListener(scale_detector));
 
     // The close button dismisses the "dialog".
     Button dismiss_button = (Button) findViewById(R.id.dismiss_button);
@@ -107,6 +128,25 @@ public class SmartIconConfig extends Activity {
         finish();
       }
     });
+  }
+
+  @Override
+  public void onWindowFocusChanged(boolean has_focus) {
+    // Calculate the offset of the preview smart icon
+    LinearLayout container = (LinearLayout)findViewById(R.id.icon_container);
+    x_offset = m_box.getLeft() + container.getLeft();
+    y_offset = m_box.getTop()  + container.getTop();
+  }
+
+  /** After updating the box parameters, render the box with these new
+   *  settings. */
+  private void renderBox() {
+    if (m_has_background) {
+      m_box.setBackgroundResource(R.drawable.smart_icon_background);
+    } else {
+      // Draw a simple white box to show the box area
+      m_box.setBackgroundResource(R.drawable.thin_line_box);
+    }
   }
 
   /** After updating the icon parameters, render the icon with these new
@@ -148,7 +188,7 @@ public class SmartIconConfig extends Activity {
     edit.putInt(SmartIcon.TEXT_PADDING, m_text_padding);
     edit.putBoolean(SmartIcon.TEXT_BOLD, m_is_bold);
     edit.putBoolean(SmartIcon.TEXT_ITALIC, m_is_italic);
-    edit.commit();
+    edit.putBoolean(SmartIcon.HAS_BACKGROUND, m_has_background);
     edit.commit();
 
     // Send the widget update intent
@@ -191,8 +231,9 @@ public class SmartIconConfig extends Activity {
      */
     @Override
     public boolean onScaleBegin(ScaleGestureDetector detector) {
-      int focus_x = (int)detector.getFocusX();
-      int focus_y = (int)detector.getFocusY();
+      // Find focus position within the icon box
+      int focus_x = (int)detector.getFocusX() - x_offset;
+      int focus_y = (int)detector.getFocusY() - y_offset;
 
       Rect icon_rect = new Rect(m_icon.getLeft(), m_icon.getTop(), m_icon.getRight(), m_icon.getBottom());
       if (icon_rect.contains(focus_x, focus_y)) {
@@ -247,7 +288,7 @@ public class SmartIconConfig extends Activity {
           // We're starting a drag event. Detect what we're dragging and save
           // it's starting position and padding.
           m_motion = Motion.DRAG;
-          m_drag_start = motion_event.getY();
+          m_drag_start = motion_event.getY() - y_offset;
           if (m_drag_start < m_icon.getBottom()) {
             m_element      = Element.ICON;
             m_drag_padding = m_icon_padding;
@@ -271,7 +312,7 @@ public class SmartIconConfig extends Activity {
         case MotionEvent.ACTION_MOVE:
           if (m_motion == Motion.DRAG) {
             // We halve the movements to get better control
-            int delta = (int)((motion_event.getY() - m_drag_start) / 2.0);
+            int delta = (int)((motion_event.getY() - y_offset - m_drag_start) / 2.0);
 
             // If we're actually dragging, calculate the displacement and update
             // the UI with the new value.

@@ -23,5 +23,6 @@
   <string name="bold_check">Bold</string>
   <string name="italic_check">Italic</string>
   <string name="shadow_check">Shadow</string>
+    <string name="background_check">Background</string>
 
 </resources>

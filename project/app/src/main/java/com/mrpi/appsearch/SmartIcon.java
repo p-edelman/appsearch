@@ -20,9 +20,11 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
 import android.util.Log;
+import android.widget.LinearLayout;
 import android.widget.RemoteViews;
 import android.widget.TextView;
 
+import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.Calendar;
 
@@ -55,6 +57,7 @@ public class SmartIcon
   public final static String TEXT_BOLD              = "TEXT_BOLD";
   public final static String TEXT_ITALIC            = "TEXT_ITALIC";
   public final static String TEXT_SHADOW            = "TEXT_SHADOW";
+  public final static String HAS_BACKGROUND         = "HAS_BACKGROUND";
   public final static String SMART_ICON_CONFIG_SHOW = "SMART_ICON_CONFIG_SHOW";
 
   /** Called by the system each time the widget is updated. This actually
@@ -99,6 +102,14 @@ public class SmartIcon
 
     SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
                                                                  Context.MODE_MULTI_PROCESS);
+
+    // Set background
+    if (preferences.getBoolean(HAS_BACKGROUND, true)) {
+      views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.smart_icon_background);
+    } else {
+      views.setInt(R.id.widget_container, "setBackgroundResource", 0);
+    }
+
     // Get all the widget ids
     ComponentName component  = new ComponentName(context, SmartIcon.class);
     AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -113,7 +124,7 @@ public class SmartIcon
       try {
         // Set the app icon
         int icon_size = preferences.getInt(SmartIcon.ICON_SIZE,
-                android.R.dimen.app_icon_size);
+                                           android.R.dimen.app_icon_size);
         int icon_padding = preferences.getInt(SmartIcon.ICON_PADDING, 0);
         int text_padding = preferences.getInt(SmartIcon.TEXT_PADDING, 0);
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,

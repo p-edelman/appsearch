@@ -7,7 +7,8 @@
                     android:orientation="vertical"
                     android:baselineAligned="false"
                     android:background="@drawable/smart_icon_background"
-                    android:gravity="top">
+                    android:gravity="top"
+                    android:id="@+id/widget_container">
 
   <ImageButton
       android:layout_width="match_parent"

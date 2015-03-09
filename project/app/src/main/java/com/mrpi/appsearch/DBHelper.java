@@ -47,11 +47,6 @@ public class DBHelper extends SQLiteOpenHelper {
   private static final String SCHEMA_USAGE =
     "(package_name TEXT, day INTEGER, time_slot INTEGER, score INTEGER, PRIMARY KEY (package_name, day, time_slot))";
 
-  /** The schema for the table with the configured widget ids. */
-  public  static final String TBL_WIDGET_IDS = "widget_ids";
-  private static final String SCHEMA_WIDGET_IDS =
-    "(widget_id INTEGER)";
-
   /** The metadata table is a simple text key/numeric value storage. */
   private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";
 
@@ -73,7 +68,6 @@ public class DBHelper extends SQLiteOpenHelper {
     db.execSQL("CREATE TABLE " + TBL_APPS + " " + SCHEMA_INSTALLED + ";");
     db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");
     db.execSQL("CREATE TABLE " + TBL_USAGE + " " + SCHEMA_USAGE);
-    db.execSQL("CREATE TABLE " + TBL_WIDGET_IDS + " " + SCHEMA_WIDGET_IDS);
     db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
     db.setTransactionSuccessful();
     db.endTransaction();

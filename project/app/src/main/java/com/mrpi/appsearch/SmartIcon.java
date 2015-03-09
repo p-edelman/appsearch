@@ -58,7 +58,6 @@ public class SmartIcon
   public final static String TEXT_ITALIC            = "TEXT_ITALIC";
   public final static String TEXT_SHADOW            = "TEXT_SHADOW";
   public final static String HAS_BACKGROUND         = "HAS_BACKGROUND";
-  public final static String SMART_ICON_CONFIG_SHOW = "SMART_ICON_CONFIG_SHOW";
 
   /** Called by the system each time the widget is updated. This actually
    *  happens only once, the very first time the widget is instantiated. From
@@ -252,19 +251,6 @@ public class SmartIcon
       context.startActivity(launch_intent);
     } else {
       super.onReceive(context, intent);
-    }
-  }
-
-  @Override
-  public void onDeleted(Context context,
-                        int[] widget_ids) {
-    // Since we're saving the id of each configured widget, we have to remove
-    // them from the settings when it is deleted.
-    DBHelper db_helper = DBHelper.getInstance(context);
-    for (int widget_id: widget_ids) {
-      SQLiteDatabase db = db_helper.getWritableDatabase();
-      String[] where_args = {Integer.toString(widget_id)};
-      db.delete(DBHelper.TBL_WIDGET_IDS, "widget_id=?", where_args);
     }
   }
 }

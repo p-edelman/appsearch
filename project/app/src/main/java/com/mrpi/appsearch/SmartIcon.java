@@ -114,7 +114,7 @@ public class SmartIcon
                                                                       PackageManager.GET_META_DATA);
         Resources resources = package_manager.getResourcesForApplication(app_info);
         Bitmap icon_raw     = BitmapFactory.decodeResource(resources, app_info.icon);
-        Bitmap icon_scaled  = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, false);
+        Bitmap icon_scaled  = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, true);
 
         // Adjust the label parameters
         views.setFloat(R.id.widget_text, "setTextSize", text_size);

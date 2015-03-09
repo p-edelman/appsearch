@@ -20,8 +20,8 @@
   <string name="show_again">Show upon creation</string>
 
   <string name="label_text">Label</string>
-  <string name="bold_check">b</string>
-  <string name="italic_check">i</string>
-  <string name="shadow_check">s</string>
+  <string name="bold_check">Bold</string>
+  <string name="italic_check">Italic</string>
+  <string name="shadow_check">Shadow</string>
 
 </resources>

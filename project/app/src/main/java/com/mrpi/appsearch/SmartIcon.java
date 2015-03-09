@@ -15,8 +15,13 @@ import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import android.graphics.Typeface;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.StyleSpan;
 import android.util.Log;
 import android.widget.RemoteViews;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -47,6 +52,9 @@ public class SmartIcon
   public final static String ICON_PADDING           = "ICON_PADDING";
   public final static String TEXT_SIZE              = "TEXT_SIZE";
   public final static String TEXT_PADDING           = "TEXT_PADDING";
+  public final static String TEXT_BOLD              = "TEXT_BOLD";
+  public final static String TEXT_ITALIC            = "TEXT_ITALIC";
+  public final static String TEXT_SHADOW            = "TEXT_SHADOW";
   public final static String SMART_ICON_CONFIG_SHOW = "SMART_ICON_CONFIG_SHOW";
 
   /** Called by the system each time the widget is updated. This actually
@@ -103,11 +111,9 @@ public class SmartIcon
       AppData app = apps.get(app_num);
       Log.d("Widget", "Working on app " + app.name);
       try {
-        // Get the app icon
+        // Set the app icon
         int icon_size = preferences.getInt(SmartIcon.ICON_SIZE,
-                                           android.R.dimen.app_icon_size);
-        float text_size = preferences.getFloat(SmartIcon.TEXT_SIZE,
-                R.dimen.smart_icon_text_size_default);
+                android.R.dimen.app_icon_size);
         int icon_padding = preferences.getInt(SmartIcon.ICON_PADDING, 0);
         int text_padding = preferences.getInt(SmartIcon.TEXT_PADDING, 0);
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
@@ -115,17 +121,27 @@ public class SmartIcon
         Resources resources = package_manager.getResourcesForApplication(app_info);
         Bitmap icon_raw     = BitmapFactory.decodeResource(resources, app_info.icon);
         Bitmap icon_scaled  = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, true);
+        views.setImageViewBitmap(R.id.widget_icon, icon_scaled);
 
         // Adjust the label parameters
+        float text_size = preferences.getFloat(SmartIcon.TEXT_SIZE,
+                R.dimen.smart_icon_text_size_default);
         views.setFloat(R.id.widget_text, "setTextSize", text_size);
+        Spannable spannable = new SpannableString(app.name);
+        if (preferences.getBoolean(TEXT_BOLD, false)) {
+          spannable.setSpan(new StyleSpan(Typeface.BOLD), 0, app.name.length(), 0);
+        }
+        if (preferences.getBoolean(TEXT_ITALIC, false)) {
+          spannable.setSpan(new StyleSpan(Typeface.ITALIC), 0, app.name.length(), 0);
+        }
+        views.setTextViewText(R.id.widget_text, spannable);
 
         // Adjust the spacing
         views.setViewPadding(R.id.widget_icon, 0, icon_padding, 0, 0);
         views.setViewPadding(R.id.widget_text, 0, text_padding, 0, 0);
 
         // Set icon and label
-        views.setImageViewBitmap(R.id.widget_icon, icon_scaled);
-        views.setTextViewText(R.id.widget_text, app.name);
+//        views.setTextViewText(R.id.widget_text, app.name);
 
         // For responding to touch, we first need to create an internal intent (that
         // can be caught by onReceive()). Then we wrap this intent in a

@@ -5,12 +5,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -30,10 +32,12 @@ public class SmartIconConfig extends Activity {
   TextView  m_text;
 
   /** These parameters define the layout. */
-  private float m_icon_size_f; // As a float for calculations, but it gets converted to int to actually use it
-  private float m_text_size;
-  private int   m_icon_padding;
-  private int   m_text_padding;
+  private float   m_icon_size_f; // As a float for calculations, but it gets converted to int to actually use it
+  private float   m_text_size;
+  private boolean m_is_bold;
+  private boolean m_is_italic;
+  private int     m_icon_padding;
+  private int     m_text_padding;
 
   /** We need to keep track of which element we're working on when zooming and
    *  dragging. */
@@ -60,8 +64,33 @@ public class SmartIconConfig extends Activity {
             getResources().getDimensionPixelSize(R.dimen.smart_icon_text_size_default));
     m_icon_padding = m_preferences.getInt(SmartIcon.ICON_PADDING, 0);
     m_text_padding = m_preferences.getInt(SmartIcon.TEXT_PADDING, 0);
-    renderNewIconSize();
-    renderNewTextSize();
+    m_is_bold      = m_preferences.getBoolean(SmartIcon.TEXT_BOLD, false);
+    m_is_italic    = m_preferences.getBoolean(SmartIcon.TEXT_ITALIC, false);
+    renderIcon();
+    renderText();
+
+    // Initialize the checkboxes
+    final CheckBox bold_check = (CheckBox)findViewById(R.id.bold_checkbox);
+    bold_check.setChecked(m_is_bold);
+    bold_check.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+      @Override
+      public void onCheckedChanged(CompoundButton button_view, boolean is_checked) {
+        m_is_bold = is_checked;
+        renderText();
+        updateWidgets();
+      }
+    });
+
+    final CheckBox italic_check = (CheckBox)findViewById(R.id.italic_checkbox);
+    italic_check.setChecked(m_is_italic);
+    italic_check.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+      @Override
+      public void onCheckedChanged(CompoundButton button_view, boolean is_checked) {
+        m_is_italic = is_checked;
+        renderText();
+        updateWidgets();
+      }
+    });
 
     // Attach movement listeners to the general, outer box (so we can detect
     // pinch gestures all over the window instead of only the elements
@@ -82,7 +111,7 @@ public class SmartIconConfig extends Activity {
 
   /** After updating the icon parameters, render the icon with these new
    *  settings. */
-  private void renderNewIconSize() {
+  private void renderIcon() {
     m_icon.setPadding(0, m_icon_padding, 0, 0);
     int icon_size_i = (int) m_icon_size_f;
     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(icon_size_i, icon_size_i + m_icon_padding);
@@ -92,7 +121,18 @@ public class SmartIconConfig extends Activity {
 
   /** After updating the text parameters, render the text with these new
    *  settings. */
-  private void renderNewTextSize() {
+  private void renderText() {
+    if (m_is_bold) {
+      if (m_is_italic) {
+        m_text.setTypeface(null, Typeface.BOLD_ITALIC);
+      } else {
+        m_text.setTypeface(null, Typeface.BOLD);
+      }
+    } else if (m_is_italic) {
+      m_text.setTypeface(null, Typeface.ITALIC);
+    } else {
+      m_text.setTypeface(null, Typeface.NORMAL);
+    }
     m_text.setPadding(0, m_text_padding, 0, 0);
     m_text.setTextSize(m_text_size);
   }
@@ -102,10 +142,13 @@ public class SmartIconConfig extends Activity {
   private void updateWidgets() {
     // Save parameters
     SharedPreferences.Editor edit = m_preferences.edit();
-    edit.putInt(SmartIcon.ICON_SIZE,    (int) m_icon_size_f);
+    edit.putInt(SmartIcon.ICON_SIZE, (int)m_icon_size_f);
     edit.putInt(SmartIcon.ICON_PADDING, m_icon_padding);
     edit.putFloat(SmartIcon.TEXT_SIZE, m_text_size);
     edit.putInt(SmartIcon.TEXT_PADDING, m_text_padding);
+    edit.putBoolean(SmartIcon.TEXT_BOLD, m_is_bold);
+    edit.putBoolean(SmartIcon.TEXT_ITALIC, m_is_italic);
+    edit.commit();
     edit.commit();
 
     // Send the widget update intent
@@ -131,12 +174,12 @@ public class SmartIconConfig extends Activity {
         m_icon_size_f *= scale_factor;
         if (m_icon_size_f > max_icon_size_f)
           m_icon_size_f = max_icon_size_f;
-        renderNewIconSize();
+        renderIcon();
         return true;
       } else if (m_element == Element.TEXT) {
         m_text_size *= scale_factor;
         if (m_text_size > max_text_size) m_text_size = max_text_size;
-        renderNewTextSize();
+        renderText();
         return true;
       }
       return false;
@@ -235,11 +278,11 @@ public class SmartIconConfig extends Activity {
             if (m_element == Element.ICON) {
               m_icon_padding = m_drag_padding + delta;
               if (m_icon_padding < 0) m_icon_padding = 0;
-              renderNewIconSize();
+              renderIcon();
             } else if (m_element == Element.TEXT) {
               m_text_padding = m_drag_padding + delta;
               if (m_text_padding < 0) m_text_padding = 0;
-              renderNewTextSize();
+              renderText();
             }
           }
           break;

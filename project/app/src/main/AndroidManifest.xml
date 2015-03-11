@@ -48,6 +48,9 @@
         <service android:name=".AppIndexService" >
         </service>
 
+        <service android:name=".SmartIconRotationService" >
+        </service>
+
         <receiver android:name=".AppChangedReceiver" >
             <intent-filter>
                 <action android:name="android.intent.action.PACKAGE_ADDED" />

@@ -4,9 +4,11 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
@@ -64,14 +66,24 @@ public class SmartIconConfig extends Activity {
     m_icon = (ImageView)findViewById(R.id.config_icon);
     m_text = (TextView)findViewById(R.id.config_text);
 
+    // Load all the preferences
     m_preferences = getSharedPreferences(SmartIcon.SMART_ICON_PREFERENCES,
                                          Context.MODE_MULTI_PROCESS);
-    m_icon_size_f = (float)m_preferences.getInt(SmartIcon.ICON_SIZE,
-            getResources().getDimensionPixelSize(android.R.dimen.app_icon_size));
-    m_text_size = m_preferences.getFloat(SmartIcon.TEXT_SIZE,
-            getResources().getDimensionPixelSize(R.dimen.smart_icon_text_size_default));
-    m_icon_padding   = m_preferences.getInt(SmartIcon.ICON_PADDING, 0);
-    m_text_padding   = m_preferences.getInt(SmartIcon.TEXT_PADDING, 0);
+    if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+      m_icon_size_f = (float) m_preferences.getInt(SmartIcon.ICON_SIZE_P,
+              getResources().getDimensionPixelSize(android.R.dimen.app_icon_size));
+      m_text_size = m_preferences.getFloat(SmartIcon.TEXT_SIZE_P,
+              getResources().getDimension(R.dimen.smart_icon_text_size_default));
+      m_icon_padding = m_preferences.getInt(SmartIcon.ICON_PADDING_P, 0);
+      m_text_padding = m_preferences.getInt(SmartIcon.TEXT_PADDING_P, 0);
+    } else {
+      m_icon_size_f = (float) m_preferences.getInt(SmartIcon.ICON_SIZE_L,
+              getResources().getDimensionPixelSize(android.R.dimen.app_icon_size));
+      m_text_size = m_preferences.getFloat(SmartIcon.TEXT_SIZE_L,
+              getResources().getDimension(R.dimen.smart_icon_text_size_default));
+      m_icon_padding = m_preferences.getInt(SmartIcon.ICON_PADDING_L, 0);
+      m_text_padding = m_preferences.getInt(SmartIcon.TEXT_PADDING_L, 0);
+    }
     m_is_bold        = m_preferences.getBoolean(SmartIcon.TEXT_BOLD, false);
     m_is_italic      = m_preferences.getBoolean(SmartIcon.TEXT_ITALIC, false);
     m_has_background = m_preferences.getBoolean(SmartIcon.HAS_BACKGROUND, true);
@@ -182,10 +194,18 @@ public class SmartIconConfig extends Activity {
   private void updateWidgets() {
     // Save parameters
     SharedPreferences.Editor edit = m_preferences.edit();
-    edit.putInt(SmartIcon.ICON_SIZE, (int)m_icon_size_f);
-    edit.putInt(SmartIcon.ICON_PADDING, m_icon_padding);
-    edit.putFloat(SmartIcon.TEXT_SIZE, m_text_size);
-    edit.putInt(SmartIcon.TEXT_PADDING, m_text_padding);
+    if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+      Log.d("Config", "Writing portrait parameters");
+      edit.putInt(SmartIcon.ICON_SIZE_P, (int) m_icon_size_f);
+      edit.putInt(SmartIcon.ICON_PADDING_P, m_icon_padding);
+      edit.putFloat(SmartIcon.TEXT_SIZE_P, m_text_size);
+      edit.putInt(SmartIcon.TEXT_PADDING_P, m_text_padding);
+    } else {
+      edit.putInt(SmartIcon.ICON_SIZE_L, (int) m_icon_size_f);
+      edit.putInt(SmartIcon.ICON_PADDING_L, m_icon_padding);
+      edit.putFloat(SmartIcon.TEXT_SIZE_L, m_text_size);
+      edit.putInt(SmartIcon.TEXT_PADDING_L, m_text_padding);
+    }
     edit.putBoolean(SmartIcon.TEXT_BOLD, m_is_bold);
     edit.putBoolean(SmartIcon.TEXT_ITALIC, m_is_italic);
     edit.putBoolean(SmartIcon.HAS_BACKGROUND, m_has_background);
@@ -202,7 +222,7 @@ public class SmartIconConfig extends Activity {
           implements ScaleGestureDetector.OnScaleGestureListener {
 
     final float max_icon_size_f = (float)getResources().getDimensionPixelSize(R.dimen.approx_widget_cell_width);
-    final float max_text_size   = getResources().getDimensionPixelSize(R.dimen.smart_icon_text_size_max);
+    final float max_text_size   = getResources().getDimension(R.dimen.smart_icon_text_size_max);
 
     @Override
     public boolean onScale(ScaleGestureDetector detector) {

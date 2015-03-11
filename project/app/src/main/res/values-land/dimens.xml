@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="approx_widget_cell_width">130dp</dimen>
+    <dimen name="approx_widget_cell_height">90dp</dimen>
+</resources>

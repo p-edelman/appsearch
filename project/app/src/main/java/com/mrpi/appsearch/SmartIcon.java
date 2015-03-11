@@ -10,8 +10,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
@@ -20,11 +20,8 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
 import android.util.Log;
-import android.widget.LinearLayout;
 import android.widget.RemoteViews;
-import android.widget.TextView;
 
-import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.Calendar;
 
@@ -50,10 +47,14 @@ public class SmartIcon
   /** Constants for the preferences. */
   public final static String SMART_ICON_PREFERENCES = "PreferencesSmartIcon";
   public final static String SMART_ICON_LAYOUT      = "SMART_ICON_LAYOUT";
-  public final static String ICON_SIZE              = "ICON_SIZE";
-  public final static String ICON_PADDING           = "ICON_PADDING";
-  public final static String TEXT_SIZE              = "TEXT_SIZE";
-  public final static String TEXT_PADDING           = "TEXT_PADDING";
+  public final static String ICON_SIZE_P            = "ICON_SIZE_P";
+  public final static String ICON_SIZE_L            = "ICON_SIZE_L";
+  public final static String ICON_PADDING_P         = "ICON_PADDING_P";
+  public final static String ICON_PADDING_L         = "ICON_PADDING_L";
+  public final static String TEXT_SIZE_P            = "TEXT_SIZE_P";
+  public final static String TEXT_SIZE_L            = "TEXT_SIZE_L";
+  public final static String TEXT_PADDING_P         = "TEXT_PADDING_P";
+  public final static String TEXT_PADDING_L         = "TEXT_PADDING_L";
   public final static String TEXT_BOLD              = "TEXT_BOLD";
   public final static String TEXT_ITALIC            = "TEXT_ITALIC";
   public final static String TEXT_SHADOW            = "TEXT_SHADOW";
@@ -71,6 +72,7 @@ public class SmartIcon
                        AppWidgetManager widget_manager,
                        int[]            widget_ids) {
     updateWidgetStart(context);
+    context.startService(new Intent(context, SmartIconRotationService.class));
     super.onUpdate(context, widget_manager, widget_ids);
   }
 
@@ -93,14 +95,14 @@ public class SmartIcon
    *  @param context the application context. This is needed for the
    *                 SearchMostUsedThread. */
   public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
+    PackageManager package_manager = context.getPackageManager();
+    Resources resources = context.getResources();
+    SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
+            Context.MODE_MULTI_PROCESS);
+
     // Instantiate the RemoteViews object for the app widget layout.
     RemoteViews views = new RemoteViews(context.getPackageName(),
-                                        R.layout.smart_icon);
-
-    PackageManager package_manager = context.getPackageManager();
-
-    SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
-                                                                 Context.MODE_MULTI_PROCESS);
+            R.layout.smart_icon);
 
     // Set background
     if (preferences.getBoolean(HAS_BACKGROUND, true)) {
@@ -109,37 +111,46 @@ public class SmartIcon
       views.setInt(R.id.widget_container, "setBackgroundResource", 0);
     }
 
-    // Adjust the spacing
-    int icon_padding = preferences.getInt(SmartIcon.ICON_PADDING, 0);
-    int text_padding = preferences.getInt(SmartIcon.TEXT_PADDING, 0);
+    // Get the orientation dependent parameters
+    int   icon_padding = 0;
+    int   text_padding = 0;
+    float text_size    = resources.getDimension(R.dimen.smart_icon_text_size_default);
+    int   icon_size    = resources.getDimensionPixelSize(android.R.dimen.app_icon_size);
+    if (resources.getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+      icon_padding = preferences.getInt(SmartIcon.ICON_PADDING_P, 0);
+      text_padding = preferences.getInt(SmartIcon.TEXT_PADDING_P, 0);
+      text_size    = preferences.getFloat(SmartIcon.TEXT_SIZE_P, text_size);
+      icon_size    = preferences.getInt(SmartIcon.ICON_SIZE_P, icon_size);
+    } else {
+      icon_padding = preferences.getInt(SmartIcon.ICON_PADDING_L, 0);
+      text_padding = preferences.getInt(SmartIcon.TEXT_PADDING_L, 0);
+      text_size    = preferences.getFloat(SmartIcon.TEXT_SIZE_L, text_size);
+      icon_size    = preferences.getInt(SmartIcon.ICON_SIZE_L, icon_size);
+    }
+
+    // Set app independent paramters
     views.setViewPadding(R.id.widget_icon, 0, icon_padding, 0, 0);
     views.setViewPadding(R.id.widget_text, 0, text_padding, 0, 0);
-
-    // Set text size
-    float text_size = preferences.getFloat(SmartIcon.TEXT_SIZE,
-            R.dimen.smart_icon_text_size_default);
     views.setFloat(R.id.widget_text, "setTextSize", text_size);
 
-    // Get all the widget ids
+    // To loop over all the installed widgets, we need to get all the widget ids
     ComponentName component  = new ComponentName(context, SmartIcon.class);
     AppWidgetManager manager = AppWidgetManager.getInstance(context);
     int[] widget_ids = manager.getAppWidgetIds(component);
 
-    // Get the top apps and set them to the icons
-    int app_num    = 0;
-    int widget_num = 0;
+    // Fill the widgets with the top apps
+    int app_num     = 0;
+    int widget_num  = 0;
     while(app_num < apps.size() && widget_num < widget_ids.length) { // Safeguard for when apps from the database are uninstalled in the meantime
       AppData app = apps.get(app_num);
       Log.d("Widget", "Working on app " + app.name);
       try {
         // Set the app icon
-        int icon_size = preferences.getInt(SmartIcon.ICON_SIZE,
-                android.R.dimen.app_icon_size);
         ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
                                                                       PackageManager.GET_META_DATA);
-        Resources resources = package_manager.getResourcesForApplication(app_info);
-        Bitmap icon_raw     = BitmapFactory.decodeResource(resources, app_info.icon);
-        Bitmap icon_scaled  = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, true);
+        Resources app_resources = package_manager.getResourcesForApplication(app_info);
+        Bitmap icon_raw         = BitmapFactory.decodeResource(app_resources, app_info.icon);
+        Bitmap icon_scaled      = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, true);
         views.setImageViewBitmap(R.id.widget_icon, icon_scaled);
 
         // Set the label

@@ -38,7 +38,8 @@
             android:text="@string/label_text"
             android:id="@+id/config_text"
             android:layout_gravity="center_horizontal"
-            android:gravity="center_horizontal"/>
+            android:gravity="center_horizontal"
+            style="@style/smart_icon_text"/>
 
         </LinearLayout>
     </LinearLayout>
@@ -68,19 +69,10 @@
       android:id="@+id/italic_checkbox"
       android:textStyle="italic"
       android:layout_alignParentStart="false"
-      android:layout_above="@+id/shadow_checkbox"
-      android:layout_alignParentLeft="true"/>
+      android:layout_alignParentLeft="true"
+      android:layout_alignBottom="@+id/dismiss_button"/>
 
-  <CheckBox
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="@string/shadow_check"
-      android:id="@+id/shadow_checkbox"
-      android:layout_alignParentStart="false"
-      android:layout_alignBottom="@+id/dismiss_button"
-      android:layout_alignParentLeft="true"/>
-
-    <Button
+  <Button
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:text="@android:string/ok"

@@ -26,11 +26,6 @@
       android:layout_gravity="center_horizontal"
       android:gravity="center_horizontal"
       android:text="@string/no_app_name"
-      style="@android:style/TextAppearance.DeviceDefault.Small"
-      android:shadowColor="@android:color/black"
-      android:shadowDx="3"
-      android:shadowDy="3"
-      android:shadowRadius="1"
-      android:textColor="@android:color/white"/>
+      style="@style/smart_icon_text"/>
 
 </LinearLayout>

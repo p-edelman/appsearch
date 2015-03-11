@@ -140,29 +140,51 @@ public class SmartIcon
 
     // Fill the widgets with the top apps
     int app_num     = 0;
-    int widget_num  = 0;
-    while(app_num < apps.size() && widget_num < widget_ids.length) { // Safeguard for when apps from the database are uninstalled in the meantime
-      AppData app = apps.get(app_num);
-      Log.d("Widget", "Working on app " + app.name);
-      try {
-        // Set the app icon
-        ApplicationInfo app_info = package_manager.getApplicationInfo(app.package_name,
-                                                                      PackageManager.GET_META_DATA);
-        Resources app_resources = package_manager.getResourcesForApplication(app_info);
-        Bitmap icon_raw         = BitmapFactory.decodeResource(app_resources, app_info.icon);
-        Bitmap icon_scaled      = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, true);
-        views.setImageViewBitmap(R.id.widget_icon, icon_scaled);
-
-        // Set the label
-        Spannable spannable = new SpannableString(app.name);
-        if (preferences.getBoolean(TEXT_BOLD, false)) {
-          spannable.setSpan(new StyleSpan(Typeface.BOLD), 0, app.name.length(), 0);
+    for (int widget_num = 0; widget_num < widget_ids.length; widget_num++) {
+      // Try to find a matching app
+      ApplicationInfo app_info      = null;
+      Resources       app_resources = null;
+      AppData         app           = null;
+      while (app_num < apps.size() && app_info == null) {
+        app = apps.get(app_num);
+        try {
+          app_info = package_manager.getApplicationInfo(app.package_name,
+                  PackageManager.GET_META_DATA);
+          app_resources = package_manager.getResourcesForApplication(app_info);
+        } catch (PackageManager.NameNotFoundException e) {
+          // App is not there anymore
+          app_num++;
         }
-        if (preferences.getBoolean(TEXT_ITALIC, false)) {
-          spannable.setSpan(new StyleSpan(Typeface.ITALIC), 0, app.name.length(), 0);
-        }
-        views.setTextViewText(R.id.widget_text, spannable);
+      }
 
+      // Load app icon and name or defaults
+      Bitmap icon_raw;
+      String label;
+      if (app_resources != null) {
+        icon_raw = BitmapFactory.decodeResource(app_resources, app_info.icon);
+        label    = app.name;
+      } else {
+        // We're out of apps, use default icons and text
+        icon_raw = BitmapFactory.decodeResource(context.getResources().getSystem(),
+                                                android.R.drawable.ic_delete);
+        label    = context.getResources().getString(R.string.no_app_name);
+      }
+
+      // Set widget icon
+      Bitmap icon_scaled = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, true);
+      views.setImageViewBitmap(R.id.widget_icon, icon_scaled);
+
+      // Set widget label
+      Spannable spannable = new SpannableString(label);
+      if (preferences.getBoolean(TEXT_BOLD, false)) {
+        spannable.setSpan(new StyleSpan(Typeface.BOLD), 0, label.length(), 0);
+      }
+      if (preferences.getBoolean(TEXT_ITALIC, false)) {
+        spannable.setSpan(new StyleSpan(Typeface.ITALIC), 0, label.length(), 0);
+      }
+      views.setTextViewText(R.id.widget_text, spannable);
+
+      if (app_resources != null) {
         // For responding to touch, we first need to create an internal intent (that
         // can be caught by onReceive()). Then we wrap this intent in a
         // PendingIntent, that we can bind to an icon.
@@ -173,20 +195,19 @@ public class SmartIcon
         // PendingIntent with the new intent.
         Intent intent = new Intent(context, SmartIcon.class);
         intent.setAction(ACTION_WIDGET_ICON_CLICK);
-        intent.putExtra("name",         app.name);
+        intent.putExtra("name", app.name);
         intent.putExtra("package_name", app.package_name);
         PendingIntent pending_intent = PendingIntent.getBroadcast(context, app_num, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
         views.setOnClickPendingIntent(R.id.widget_icon, pending_intent);
         views.setOnClickPendingIntent(R.id.widget_text, pending_intent);
-
-        manager.updateAppWidget(widget_ids[widget_num], views);
-
-        widget_num++;
-      } catch (PackageManager.NameNotFoundException e) {
-        // App is not there anymore, by silently ignoring this we skip to the
-        // next app in the list
+      } else {
+        // Make sure any intents attached from the previous round are cleared
+        views.setOnClickPendingIntent(R.id.widget_icon, null);
+        views.setOnClickPendingIntent(R.id.widget_text, null);
       }
+
+      manager.updateAppWidget(widget_ids[widget_num], views);
       app_num++;
     }
   }

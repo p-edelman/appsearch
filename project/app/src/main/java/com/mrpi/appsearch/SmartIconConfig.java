@@ -11,9 +11,11 @@ import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -66,7 +68,15 @@ public class SmartIconConfig extends Activity {
   @Override
   protected void onCreate(Bundle saved_state) {
     super.onCreate(saved_state);
-    setContentView(R.layout.activity_smart_icon_config);
+
+    // Make sure the window is placed at the upper side of the screen, so that
+    // the user has a larger chance of having a smart icon in view.
+    WindowManager.LayoutParams params = this.getWindow().getAttributes();
+    params.gravity = Gravity.TOP;
+    params.y       = 10;
+    LayoutInflater inflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+    View view = inflater.inflate(R.layout.activity_smart_icon_config, null, false);
+    setContentView(view, params);
 
     // Initialize the UI components with their parameters
     m_box  = (LinearLayout)findViewById(R.id.icon_box);

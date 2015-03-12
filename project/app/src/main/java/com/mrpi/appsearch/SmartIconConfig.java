@@ -8,7 +8,9 @@ import android.content.res.Configuration;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
@@ -19,6 +21,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.maps.MapView;
 
@@ -34,6 +37,10 @@ public class SmartIconConfig extends Activity {
   LinearLayout m_box;
   ImageView    m_icon;
   TextView     m_text;
+
+  /** Needed for feedback to the user. */
+  Toast        m_toast;
+  Float        m_density = null;
 
   /** These parameters define the layout. */
   private float   m_icon_size_f; // As a float for calculations, but it gets converted to int to actually use it
@@ -65,6 +72,10 @@ public class SmartIconConfig extends Activity {
     m_box  = (LinearLayout)findViewById(R.id.icon_box);
     m_icon = (ImageView)findViewById(R.id.config_icon);
     m_text = (TextView)findViewById(R.id.config_text);
+
+    // Create the toast for displaying scaling and dragging feedback
+    m_toast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
+    m_toast.setGravity(Gravity.TOP, 0, 0);
 
     // Load all the preferences
     m_preferences = getSharedPreferences(SmartIcon.SMART_ICON_PREFERENCES,
@@ -189,6 +200,22 @@ public class SmartIconConfig extends Activity {
     m_text.setTextSize(m_text_size);
   }
 
+  /** Set the toast text to the provided number, converting from pixels
+   *  to dp.
+   *  @param str a string to start the message with, the dp value will be
+   *             concatenated to it
+   *  @param pixels pixel value to display as dp */
+  private void setFeedbackTextToDP(String str, int pixels) {
+    if (m_density == null) {
+      DisplayMetrics metrics = new DisplayMetrics();
+      getWindowManager().getDefaultDisplay().getMetrics(metrics);
+      m_density = metrics.density;
+    }
+    pixels = (int)(pixels / m_density);
+    m_toast.setText(str + Integer.toString(pixels));
+    m_toast.show();
+  }
+
   /** After adjusting same parameters, save them to the settings and signal
    *  the active widgets to update themselves with these new settings. */
   private void updateWidgets() {
@@ -226,19 +253,24 @@ public class SmartIconConfig extends Activity {
 
     @Override
     public boolean onScale(ScaleGestureDetector detector) {
-      // Halve the scale factor to provide better control
-      double scale_factor = ((detector.getScaleFactor() - 1.0) / 2.0) + 1.0;
+      // Scale down the scale factor to provide better control
+      double scale_factor = ((detector.getScaleFactor() - 1.0) / 3.0) + 1.0;
 
       // Handle the scaling for either the icon or the text
       if (m_element == Element.ICON) {
         m_icon_size_f *= scale_factor;
         if (m_icon_size_f > max_icon_size_f)
           m_icon_size_f = max_icon_size_f;
+        String str = getResources().getString(R.string.feedback_icon_size);
+        setFeedbackTextToDP(str, (int) m_icon_size_f);
         renderIcon();
         return true;
       } else if (m_element == Element.TEXT) {
         m_text_size *= scale_factor;
         if (m_text_size > max_text_size) m_text_size = max_text_size;
+        String str = getResources().getString(R.string.feedback_text_size);
+        m_toast.setText(str + String.format("%.1f", m_text_size));
+        m_toast.show();
         renderText();
         return true;
       }
@@ -331,18 +363,22 @@ public class SmartIconConfig extends Activity {
           break;
         case MotionEvent.ACTION_MOVE:
           if (m_motion == Motion.DRAG) {
-            // We halve the movements to get better control
-            int delta = (int)((motion_event.getY() - y_offset - m_drag_start) / 2.0);
+            // We scale down the movements to get better control
+            int delta = (int)((motion_event.getY() - y_offset - m_drag_start) / 3.0);
 
             // If we're actually dragging, calculate the displacement and update
             // the UI with the new value.
             if (m_element == Element.ICON) {
               m_icon_padding = m_drag_padding + delta;
               if (m_icon_padding < 0) m_icon_padding = 0;
+              String str = getResources().getString(R.string.feedback_icon_distance);
+              setFeedbackTextToDP(str, m_icon_padding);
               renderIcon();
             } else if (m_element == Element.TEXT) {
               m_text_padding = m_drag_padding + delta;
               if (m_text_padding < 0) m_text_padding = 0;
+              String str = getResources().getString(R.string.feedback_text_distance);
+              setFeedbackTextToDP(str, m_text_padding);
               renderText();
             }
           }

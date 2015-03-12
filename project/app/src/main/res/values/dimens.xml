@@ -14,6 +14,6 @@
   <dimen name="approx_widget_cell_height">130dp</dimen>
   <dimen name="smart_icon_text_size_default">14sp</dimen>
   <dimen name="smart_icon_text_size_max">25sp</dimen>
-  <dimen name="gesture_space">20dp</dimen>
+  <dimen name="gesture_space">15dp</dimen>
 
 </resources>

@@ -11,17 +11,18 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/icon_container"
-        android:layout_toRightOf="@+id/background_checkbox"
         android:paddingLeft="@dimen/gesture_space"
         android:paddingTop="@dimen/gesture_space"
-        android:paddingRight="@dimen/gesture_space">
+        android:paddingRight="@dimen/gesture_space"
+        android:layout_toLeftOf="@+id/dismiss_button"
+        android:layout_toRightOf="@+id/background_checkbox">
 
         <LinearLayout
           android:orientation="vertical"
           android:layout_width="@dimen/approx_widget_cell_width"
           android:layout_height="@dimen/approx_widget_cell_height"
           android:id="@+id/icon_box"
-          android:layout_gravity="center_horizontal"
+          android:layout_gravity="center"
           android:background="@drawable/smart_icon_background"
           android:padding="2dp">
 

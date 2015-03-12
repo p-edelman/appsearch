@@ -14,8 +14,12 @@
   <!-- Stuff for the smart icon configuration. -->
   <string name="smart_icon">Smart icon</string>
   <string name="no_app_name">Nothing yet</string>
-  <string name="menu_smart_icon_settings">Smart icon settings</string>
-  <string name="smart_icon_config_title">Choose a layout</string>
+  <string name="menu_smart_icon_settings">Customize smart icons</string>
+  <string name="smart_icon_config_title">Drag/zoom icon and text</string>
+  <string name="feedback_text_size">Text size:</string>
+  <string name="feedback_icon_size">Icon size:</string>
+  <string name="feedback_text_distance">Text distance:</string>
+  <string name="feedback_icon_distance">Icon distance:</string>
   <string name="dont_show_again">Don\'t show upon creation</string>
   <string name="show_again">Show upon creation</string>
 
@@ -23,6 +27,6 @@
   <string name="bold_check">Bold</string>
   <string name="italic_check">Italic</string>
   <string name="shadow_check">Shadow</string>
-    <string name="background_check">Background</string>
+  <string name="background_check">Background</string>
 
 </resources>

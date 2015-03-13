@@ -28,14 +28,14 @@
   <string name="done">Done</string>
   <string-array name="smart_icon_config_hints">
     <item>A smart icon shows your favourite app for the current time and day </item>
-    <item>You can make a smart icon look like a normal icon</item>
-    <item>If you can see a smart icon underneath this dialog, you can see the changes happening</item>
-    <item>You can drag the icon and the label up and down</item>
-    <item>Use pinch gestures for scaling</item>
+    <item>By adjusting the layout, you can make a smart icon look like a normal icon</item>
     <item>The icon and label can both be scaled/moved</item>
+    <item>Use pinch gestures for scaling</item>
+    <item>You can drag both the icon and the label up and down</item>
+    <item>Make sure to see a smart icon underneath this dialog to see how changes work out</item>
     <item>To change the layout later on, use the app menu</item>
-    <item>Try adding multiple smart icons</item>
-    <item>Portrait and landscape are configured separately</item>
+    <item>Portrait and landscape need to be configured separately</item>
+    <item>When done, other smart icons you add will have the same layout</item>
   </string-array>
 
 </resources>

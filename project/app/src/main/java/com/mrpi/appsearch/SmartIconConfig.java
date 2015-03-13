@@ -16,6 +16,8 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -31,6 +33,11 @@ import com.google.android.maps.MapView;
  *  The activity is a transparent dialog, so the icon (widget) can be seen
  *  while the settings are changed. */
 public class SmartIconConfig extends Activity {
+
+  /** How long should hints be shown? */
+  private final static int FADE_DURATION = 500;
+  private final static int HINT_DURATION = 5000;
+  int m_hint_index;
 
   /** The SharedPreferences object for all the smart icon preferences. */
   SharedPreferences m_preferences;
@@ -161,6 +168,8 @@ public class SmartIconConfig extends Activity {
         finish();
       }
     });
+
+    runHints();
   }
 
   @Override
@@ -252,6 +261,49 @@ public class SmartIconConfig extends Activity {
     Intent update_intent = new Intent(SmartIconConfig.this, SmartIcon.class);
     update_intent.setAction(SmartIcon.ACTION_WIDGET_UPDATE);
     sendBroadcast(update_intent);
+  }
+
+  /** Make the hint box beneath the widget display the hints alternately. */
+  private void runHints() {
+    final TextView hint_text = (TextView)findViewById(R.id.hint_text);
+    final String[] hints = getResources().getStringArray(R.array.smart_icon_config_hints);
+    m_hint_index = 0;
+    hint_text.setText(hints[m_hint_index]);
+
+    final Animation fade_in  = new AlphaAnimation(0.0f, 1.0f);
+    final Animation fade_out = new AlphaAnimation(1.0f, 0.0f);
+    fade_in.setDuration(FADE_DURATION);
+    fade_out.setDuration(FADE_DURATION);
+    fade_out.setStartOffset(HINT_DURATION);
+    fade_out.setRepeatMode(Animation.INFINITE);
+    fade_in.setRepeatMode(Animation.INFINITE);
+    fade_in.setAnimationListener(new Animation.AnimationListener() {
+      @Override
+      public void onAnimationEnd(Animation animation) {
+        hint_text.startAnimation(fade_out);
+      }
+
+      @Override public void onAnimationStart(Animation animation) {}
+      @Override public void onAnimationRepeat(Animation animation) {}
+    });
+    fade_out.setAnimationListener(new Animation.AnimationListener() {
+      @Override
+      public void onAnimationEnd(Animation animation) {
+        m_hint_index++;
+        if (m_hint_index == hints.length) m_hint_index = 0;
+        hint_text.setText(hints[m_hint_index]);
+        hint_text.startAnimation(fade_in);
+      }
+
+      @Override
+      public void onAnimationStart(Animation animation) {
+      }
+
+      @Override
+      public void onAnimationRepeat(Animation animation) {
+      }
+    });
+    hint_text.startAnimation(fade_out);
   }
 
   /** A custom listener for handling pinch scaling. */

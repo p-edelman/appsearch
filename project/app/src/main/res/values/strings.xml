@@ -20,13 +20,22 @@
   <string name="feedback_icon_size">Icon size:</string>
   <string name="feedback_text_distance">Text distance:</string>
   <string name="feedback_icon_distance">Icon distance:</string>
-  <string name="dont_show_again">Don\'t show upon creation</string>
-  <string name="show_again">Show upon creation</string>
-
   <string name="label_text">Label</string>
-  <string name="bold_check">Bold</string>
-  <string name="italic_check">Italic</string>
-  <string name="shadow_check">Shadow</string>
+  <string name="bold_check">Bold text</string>
+  <string name="italic_check">Italic text</string>
   <string name="background_check">Background</string>
+  <string name="hint">"Hint: "</string>
+  <string name="done">Done</string>
+  <string-array name="smart_icon_config_hints">
+    <item>A smart icon shows your favourite app for the current time and day </item>
+    <item>You can make a smart icon look like a normal icon</item>
+    <item>If you can see a smart icon underneath this dialog, you can see the changes happening</item>
+    <item>You can drag the icon and the label up and down</item>
+    <item>Use pinch gestures for scaling</item>
+    <item>The icon and label can both be scaled/moved</item>
+    <item>To change the layout later on, use the app menu</item>
+    <item>Try adding multiple smart icons</item>
+    <item>Portrait and landscape are configured separately</item>
+  </string-array>
 
 </resources>

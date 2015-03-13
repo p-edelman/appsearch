@@ -199,6 +199,7 @@ public class MainActivity
       
     // Now, launch the app.
     Intent launch_intent = getPackageManager().getLaunchIntentForPackage(package_name);
+    launch_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     startActivity(launch_intent);
   }
 

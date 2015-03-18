@@ -1,0 +1,105 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:context="com.mrpi.appsearch.SmartIconConfig"
+                android:padding="@dimen/dialog_margin"
+                android:id="@+id/widget">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/icon_container"
+        android:paddingLeft="@dimen/gesture_space"
+        android:paddingRight="@dimen/gesture_space"
+        android:layout_toLeftOf="@+id/dismiss_button"
+        android:layout_toRightOf="@+id/background_checkbox">
+
+        <LinearLayout
+          android:orientation="vertical"
+          android:layout_width="@dimen/approx_widget_cell_width"
+          android:layout_height="@dimen/approx_widget_cell_height"
+          android:id="@+id/icon_box"
+          android:layout_gravity="center"
+          android:background="@drawable/smart_icon_background"
+          android:padding="2dp">
+
+          <ImageView
+            android:layout_width="@android:dimen/app_icon_size"
+            android:layout_height="@android:dimen/app_icon_size"
+            android:id="@+id/config_icon"
+            android:layout_gravity="center_horizontal"
+            android:src="@drawable/ic_launcher"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/label_text"
+            android:id="@+id/config_text"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center_horizontal"
+            style="@style/smart_icon_text"/>
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/background_check"
+        android:id="@+id/background_checkbox"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"/>
+
+    <CheckBox
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/bold_check"
+      android:id="@+id/bold_checkbox"
+      android:layout_alignParentLeft="true"
+      android:textStyle="bold"
+      android:layout_alignParentStart="false"
+      android:layout_below="@+id/background_checkbox"/>
+
+  <CheckBox
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/italic_check"
+      android:id="@+id/italic_checkbox"
+      android:textStyle="italic"
+      android:layout_alignParentStart="false"
+      android:layout_alignParentLeft="true"
+      android:layout_below="@+id/bold_checkbox"/>
+
+  <Button
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/done"
+      android:id="@+id/dismiss_button"
+      style="@android:style/Holo.SegmentedButton"
+      android:layout_gravity="right"
+      android:layout_alignParentRight="true"
+      android:layout_above="@+id/hint_text"/>
+
+  <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:textAppearance="?android:attr/textAppearanceSmall"
+      android:text="@string/hint"
+      android:id="@+id/hint_text_literal"
+      android:layout_alignTop="@+id/hint_text"
+      android:layout_alignParentLeft="true"/>
+
+  <TextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textAppearance="?android:attr/textAppearanceSmall"
+      android:id="@+id/hint_text"
+      android:layout_alignParentLeft="false"
+      android:layout_below="@+id/icon_container"
+      android:layout_toRightOf="@+id/hint_text_literal"
+      android:layout_alignParentEnd="true"
+      android:lines="2"/>
+
+</RelativeLayout>

@@ -5,7 +5,7 @@
     android:versionName="1.0" >
 
     <uses-sdk
-        android:minSdkVersion="14"
+        android:minSdkVersion="16"
         android:targetSdkVersion="16" />
 
     <application
@@ -19,7 +19,6 @@
             android:launchMode="singleTop" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
@@ -38,16 +37,18 @@
             -->
             <intent-filter>
                 <action android:name="android.intent.action.ASSIST" />
-
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
-            <meta-data
+          <meta-data
                 android:name="android.app.searchable"
                 android:resource="@xml/searchable" />
         </activity>
 
         <service android:name=".AppIndexService" >
+        </service>
+
+        <service android:name=".SmartIconRotationService" >
         </service>
 
         <receiver android:name=".AppChangedReceiver" >
@@ -66,15 +67,34 @@
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".MostUsedWidget" >
+        <receiver
+            android:name=".SearchButton"
+            android:label="@string/search_button" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
 
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/most_used_widget_info" />
+                android:resource="@xml/search_button_info" />
         </receiver>
+        <receiver
+            android:name=".SmartIcon"
+            android:label="@string/smart_icon" >
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/smart_icon_info" />
+        </receiver>
+
+        <activity android:name=".SmartIconConfig"
+                  android:label="@string/smart_icon_config_title"
+                  android:theme="@style/theme_config_dialog"
+                  android:launchMode="singleInstance">
+        </activity>
     </application>
 
 </manifest>

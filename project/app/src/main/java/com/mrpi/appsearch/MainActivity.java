@@ -15,6 +15,8 @@ import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -218,6 +220,7 @@ public class MainActivity
       
     // Now, launch the app.
     Intent launch_intent = getPackageManager().getLaunchIntentForPackage(package_name);
+    launch_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     startActivity(launch_intent);
   }
 
@@ -226,7 +229,22 @@ public class MainActivity
     getMenuInflater().inflate(R.menu.activity_main, menu);
     return true;
   }
-  
+
+  public boolean onPrepareOptionsMenu (Menu menu) {
+    // Disable enable smart icons entry based on whether there are smart
+    // icons.
+    ComponentName component  = new ComponentName(this, SmartIcon.class);
+    AppWidgetManager manager = AppWidgetManager.getInstance(this);
+    int num_smart_icons = manager.getAppWidgetIds(component).length;
+    if (num_smart_icons == 0) {
+      menu.findItem(R.id.menu_smart_icon_settings).setVisible(false);
+    } else {
+      menu.findItem(R.id.menu_smart_icon_settings).setVisible(true);
+    }
+    
+    return true;
+  }
+
   @Override
   public boolean onOptionsItemSelected (MenuItem item) {
     if (item.getItemId() == R.id.menu_about) {
@@ -237,6 +255,12 @@ public class MainActivity
       m_about_dialog.show(fm, "dialog_about");
 
       return true;
+    } else if (item.getItemId() == R.id.menu_smart_icon_settings) {
+      Intent settings_intent = new Intent(this, SmartIconConfig.class);
+      startActivity(settings_intent);
+      finish(); // We need to hide the main activity to show the configuration
+                // dialog on the home screen, so the user can actually see what
+                // happens to the icons.
     }
     return super.onOptionsItemSelected(item);
   }

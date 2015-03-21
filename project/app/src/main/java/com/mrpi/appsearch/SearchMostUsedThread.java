@@ -1,7 +1,8 @@
 package com.mrpi.appsearch;
 
 import android.content.Context;
-import android.content.pm.ApplicationInfo;
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -10,10 +11,6 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.TreeMap;
 
 /** Class for finding the most used apps in a background thread.
  *  This thread gets the results from the cached database, but filters out any
@@ -72,18 +69,18 @@ public class SearchMostUsedThread extends SearchThread {
       while (result && !isCancelled() &&
              (apps.size() < num_results || num_results == 0)) {
         String package_name = cursor.getString(0);
-        try {
-          ApplicationInfo app_info = m_package_manager.getApplicationInfo(package_name, 0);
-          String name = m_package_manager.getApplicationLabel(app_info).toString();
-          AppData app_data = new AppData(name, package_name);
+        Intent intent       = m_context.getPackageManager().getLaunchIntentForPackage(package_name);
+        if (intent != null) { // Intent will be null if package has been uninstalled, so we filter out these apps here
+          ActivityInfo activity_info = intent.resolveActivityInfo(m_package_manager, 0);
+          String name                = activity_info.loadLabel(m_package_manager).toString();
+          AppData app_data           = new AppData(name, package_name);
+
           // If the package is already present in the list, this new entry has a
           // lower score so we can ignore it.
           if (!apps.contains(app_data)) {
             app_data.match_rating = cursor.getInt(1);
             apps.add(app_data);
           }
-        } catch (PackageManager.NameNotFoundException e) {
-          // Apparently, package has been uninstalled, so ignore it.
         }
         result = cursor.moveToNext();
       }

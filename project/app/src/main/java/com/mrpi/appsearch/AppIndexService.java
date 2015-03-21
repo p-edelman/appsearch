@@ -5,7 +5,6 @@ import java.util.List;
 
 import android.app.IntentService;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -92,7 +91,7 @@ public class AppIndexService
     ArrayList<AppData> app_list = new ArrayList<AppData>();
     for (ResolveInfo resolve_info : packages) {
       ActivityInfo activity_info = resolve_info.activityInfo;
-      AppData app_data = new AppData(resolve_info.loadLabel(pm).toString(),
+      AppData app_data = new AppData(activity_info.loadLabel(pm).toString(),
                                      activity_info.applicationInfo.packageName);
       if (!app_data.package_name.equals(own_name)) { // Exclude self from list
         app_list.add(app_data);

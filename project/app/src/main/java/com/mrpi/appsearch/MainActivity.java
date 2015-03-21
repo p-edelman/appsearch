@@ -143,7 +143,11 @@ public class MainActivity
   private void reset() {
     Log.d("Reset", "Resetting");
     // Clear results
-    m_results_view.setAdapter(null);
+    AppArrayAdapter adapter = ((AppArrayAdapter)m_results_view.getAdapter());
+    if (adapter != null) {
+      adapter.clear();
+      adapter.notifyDataSetChanged();
+    }
     m_search_view.setQuery("", false);
     
     if (m_about_dialog != null) {

@@ -46,7 +46,6 @@ public class SmartIcon
 
   /** Constants for the preferences. */
   public final static String SMART_ICON_PREFERENCES = "PreferencesSmartIcon";
-  public final static String SMART_ICON_LAYOUT      = "SMART_ICON_LAYOUT";
   public final static String ICON_SIZE_P            = "ICON_SIZE_P";
   public final static String ICON_SIZE_L            = "ICON_SIZE_L";
   public final static String ICON_PADDING_P         = "ICON_PADDING_P";
@@ -57,7 +56,6 @@ public class SmartIcon
   public final static String TEXT_PADDING_L         = "TEXT_PADDING_L";
   public final static String TEXT_BOLD              = "TEXT_BOLD";
   public final static String TEXT_ITALIC            = "TEXT_ITALIC";
-  public final static String TEXT_SHADOW            = "TEXT_SHADOW";
   public final static String HAS_BACKGROUND         = "HAS_BACKGROUND";
 
   /** Called by the system each time the widget is updated. This actually
@@ -149,7 +147,7 @@ public class SmartIcon
         app = apps.get(app_num);
         try {
           app_info = package_manager.getApplicationInfo(app.package_name,
-                  PackageManager.GET_META_DATA);
+            PackageManager.GET_META_DATA);
           app_resources = package_manager.getResourcesForApplication(app_info);
         } catch (PackageManager.NameNotFoundException e) {
           // App is not there anymore
@@ -165,7 +163,7 @@ public class SmartIcon
         label    = app.name;
       } else {
         // We're out of apps, use default icons and text
-        icon_raw = BitmapFactory.decodeResource(context.getResources().getSystem(),
+        icon_raw = BitmapFactory.decodeResource(Resources.getSystem(),
                                                 android.R.drawable.ic_delete);
         label    = context.getResources().getString(R.string.no_app_name);
       }
@@ -274,7 +272,7 @@ public class SmartIcon
 
       // Save the launch time slot to the database
       CountAndDecay count_decay = new CountAndDecay(DBHelper.getInstance(context));
-      count_decay.countAppLaunch(name, package_name);
+      count_decay.countAppLaunch(package_name);
 
       // Now, launch the app.
       Log.d("Widget", "Launching app " + name);

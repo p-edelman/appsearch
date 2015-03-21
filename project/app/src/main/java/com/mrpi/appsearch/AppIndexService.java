@@ -96,7 +96,7 @@ public class AppIndexService
       if (!app_data.package_name.equals(own_name)) { // Exclude self from list
         app_list.add(app_data);
       }
-    };
+    }
 
     return app_list;
   }

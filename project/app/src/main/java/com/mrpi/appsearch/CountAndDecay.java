@@ -57,10 +57,9 @@ public class CountAndDecay {
    *  <p>
    *  This method sets or updates the count field of the three tables to the
    *  proper value for the current time slot and the surrounding time slots.
-   *  @param public_name the public name of the app
-   *  @param package_name the package name of the app
+   * @param package_name the package name of the app
    */
-  public void countAppLaunch(String public_name, String package_name) {
+  public void countAppLaunch(String package_name) {
     // Perform a decay step if needed
     decay();
 

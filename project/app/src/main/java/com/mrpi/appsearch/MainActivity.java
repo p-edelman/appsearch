@@ -195,7 +195,7 @@ public class MainActivity
     if (m_count_decay == null) {
       m_count_decay = new CountAndDecay(DBHelper.getInstance(this));
     }
-    m_count_decay.countAppLaunch(name, package_name);
+    m_count_decay.countAppLaunch(package_name);
       
     // Now, launch the app.
     Intent launch_intent = getPackageManager().getLaunchIntentForPackage(package_name);

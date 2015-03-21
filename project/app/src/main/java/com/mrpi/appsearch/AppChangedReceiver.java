@@ -13,8 +13,8 @@ public class AppChangedReceiver extends BroadcastReceiver {
     Log.d("AppSearch", "Something has changed in the apps");
 
     String action = received_intent.getAction();
-    if (action == Intent.ACTION_UNINSTALL_PACKAGE ||
-        action == Intent.ACTION_PACKAGE_FULLY_REMOVED) {
+    if (Intent.ACTION_UNINSTALL_PACKAGE.equals(action) ||
+      Intent.ACTION_PACKAGE_FULLY_REMOVED.equals(action)) {
       if (!(received_intent.getBooleanExtra(Intent.EXTRA_REPLACING, false))) { // It's no upgrade
         // Remove package from launch cache
         Uri data = received_intent.getData();

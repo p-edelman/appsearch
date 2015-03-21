@@ -112,8 +112,8 @@ public class SmartIcon
     }
 
     // Get the orientation dependent parameters
-    int   icon_padding = 0;
-    int   text_padding = 0;
+    int   icon_padding;
+    int   text_padding;
     float text_size    = resources.getDimension(R.dimen.smart_icon_text_size_default);
     int   icon_size    = resources.getDimensionPixelSize(android.R.dimen.app_icon_size);
     if (resources.getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {

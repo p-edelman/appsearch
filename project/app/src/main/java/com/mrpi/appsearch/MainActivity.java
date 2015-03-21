@@ -23,9 +23,9 @@ import android.widget.SearchView;
  *  <p>
  *  To make the app speedy and snappy, parallelization is employed in two ways.
  *  The first is for indexing the installed apps. This is delegated to a
- *  {@link AppIndexService} running in the background. The tradeoff is accuracy:
- *  while the background service is running (which may take up to tens of
- *  seconds), the search is performed on a cached index.
+ *  {@link AppIndexService} running in the background. The trade-off is
+ *  accuracy: while the background service is running (which may take up to tens
+ *  of seconds), the search is performed on a cached index.
  *  <p>
  *  Also searching and subsequently formatting the results is done in a parallel
  *  process through {@link SearchFuzzyTextThread}. This prevents the keyboard from

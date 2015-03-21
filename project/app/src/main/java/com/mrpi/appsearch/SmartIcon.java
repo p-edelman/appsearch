@@ -128,7 +128,7 @@ public class SmartIcon
       icon_size    = preferences.getInt(SmartIcon.ICON_SIZE_L, icon_size);
     }
 
-    // Set app independent paramters
+    // Set app independent parameters
     views.setViewPadding(R.id.widget_icon, 0, icon_padding, 0, 0);
     views.setViewPadding(R.id.widget_text, 0, text_padding, 0, 0);
     views.setFloat(R.id.widget_text, "setTextSize", text_size);

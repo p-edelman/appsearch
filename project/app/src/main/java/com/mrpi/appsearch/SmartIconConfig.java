@@ -165,6 +165,10 @@ public class SmartIconConfig extends Activity {
     dismiss_button.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
+        SharedPreferences.Editor editor = m_preferences.edit();
+        editor.putBoolean(SmartIcon.IS_CONFIGURED, true);
+        editor.apply();
+
         finish();
       }
     });

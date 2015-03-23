@@ -57,6 +57,7 @@ public class SmartIcon
   public final static String TEXT_BOLD              = "TEXT_BOLD";
   public final static String TEXT_ITALIC            = "TEXT_ITALIC";
   public final static String HAS_BACKGROUND         = "HAS_BACKGROUND";
+  public final static String IS_CONFIGURED          = "IS_CONFIGURED";
 
   /** Called by the system each time the widget is updated. This actually
    *  happens only once, the very first time the widget is instantiated. From
@@ -238,21 +239,35 @@ public class SmartIcon
     AlarmManager alarm_manager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
     alarm_manager.setRepeating(AlarmManager.RTC, time.getTimeInMillis(), 5 * 60 * 1000, pending_intent);
 
-    // Configure the widget
-    Intent launch_intent = new Intent(context, SmartIconConfig.class);
-    launch_intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-    context.startActivity(launch_intent);
+   // Configure the widget if needed
+   SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
+                                                                Context.MODE_MULTI_PROCESS);
+   if (!preferences.getBoolean(IS_CONFIGURED, false)) {
+     Intent launch_intent = new Intent(context, SmartIconConfig.class);
+     launch_intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+     context.startActivity(launch_intent);
+   }
   }
 
   /** Called when all widgets are removed. This method cancels the running
    *  AlarmManager. */
   @Override
   public void onDisabled(Context context) {
+    // Disable alarammanager
     Log.d("Widget", "Last widget deleted, disabling alarm manager");
     Intent intent                = new Intent(context, SmartIcon.class);
     PendingIntent pending_intent = PendingIntent.getBroadcast(context, 0, intent, 0);
     AlarmManager alarm_manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
     alarm_manager.cancel(pending_intent);
+
+   // We leave everything again "unconfigured"; it's likely that when the user ever returns, a new
+   // configuration is required.
+   SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
+                                                                Context.MODE_MULTI_PROCESS);
+   SharedPreferences.Editor editor = preferences.edit();
+   editor.putBoolean(IS_CONFIGURED, false);
+   editor.apply();
+
     super.onDisabled(context);
   }
 

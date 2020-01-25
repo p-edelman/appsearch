@@ -27,8 +27,6 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.maps.MapView;
-
 /** Activity to configure a smart icon.
  *  The activity is a transparent dialog, so the icon (widget) can be seen
  *  while the settings are changed. */
@@ -201,7 +199,7 @@ public class SmartIconConfig extends Activity {
     m_icon.setPadding(0, m_icon_padding, 0, 0);
     int icon_size_i = (int) m_icon_size_f;
     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(icon_size_i, icon_size_i + m_icon_padding);
-    params.gravity = MapView.LayoutParams.CENTER_HORIZONTAL;
+    params.gravity = Gravity.CENTER_HORIZONTAL;
     m_icon.setLayoutParams(params);
   }
 

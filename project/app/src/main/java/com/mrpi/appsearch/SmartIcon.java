@@ -15,7 +15,9 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import android.graphics.Canvas;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.StyleSpan;
@@ -157,20 +159,22 @@ public class SmartIcon
       }
 
       // Load app icon and name or defaults
-      Bitmap icon_raw;
+      Drawable icon_raw;
       String label;
       if (app_resources != null) {
-        icon_raw = BitmapFactory.decodeResource(app_resources, app_info.icon);
+        icon_raw = package_manager.getApplicationIcon(app_info);
         label    = app.name;
       } else {
         // We're out of apps, use default icons and text
-        icon_raw = BitmapFactory.decodeResource(Resources.getSystem(),
-                                                android.R.drawable.ic_delete);
+        icon_raw = context.getResources().getDrawable(android.R.drawable.ic_delete);
         label    = context.getResources().getString(R.string.no_app_name);
       }
 
-      // Set widget icon
-      Bitmap icon_scaled = Bitmap.createScaledBitmap(icon_raw, icon_size, icon_size, true);
+      // Render application icon to widget format and set it to the widget
+      Bitmap icon_scaled = Bitmap.createBitmap(icon_size, icon_size, Bitmap.Config.ARGB_8888);
+      Canvas icon_canvas = new Canvas(icon_scaled);
+      icon_raw.setBounds(0, 0, icon_size, icon_size);
+      icon_raw.draw(icon_canvas);
       views.setImageViewBitmap(R.id.widget_icon, icon_scaled);
 
       // Set widget label

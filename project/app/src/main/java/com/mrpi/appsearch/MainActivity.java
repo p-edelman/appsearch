@@ -2,26 +2,23 @@ package com.mrpi.appsearch;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.List;
 
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
+import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -30,6 +27,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SearchView;
+import android.widget.Toast;
 
 /** The main Activity for the app.
  *  <p>
@@ -68,9 +66,15 @@ public class MainActivity
                                             // happening.
   private AboutDialog    m_about_dialog;    // The "about" dialog.
 
-  private CountAndDecay m_count_decay = null;
+  private CountAndDecay  m_count_decay = null;
 
-  private final static String SECRET_SEND_DATA = "send database";
+  /** Command that can be typed into the search box for additional functionality */
+  private final static String COMMAND_SEND_DATA        = "send database";
+  private final static String COMMAND_COLLECT_RAW      = "collect raw data";
+  private final static String COMMAND_DONT_COLLECT_RAW = "don't collect raw data";
+
+  /** Keys for individual preferences */
+  private final static String PREFS_COLLECT_RAW = "collect_raw_data";
 
   @Override
   protected void onCreate(Bundle saved_instance) {
@@ -97,8 +101,24 @@ public class MainActivity
 
       @Override
       public boolean onQueryTextSubmit(String query) {
-        if (query.equals(SECRET_SEND_DATA)) {
+        if (query.equals(COMMAND_SEND_DATA)) {
           sendUsageData();
+        } else if (query.equals(COMMAND_COLLECT_RAW) || query.equals(COMMAND_DONT_COLLECT_RAW)) {
+          boolean collect_raw = query.equals(COMMAND_COLLECT_RAW);
+          SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
+          editor.putBoolean(PREFS_COLLECT_RAW, collect_raw);
+          if (m_count_decay != null) {
+            m_count_decay.setRawDataCollection(collect_raw);
+          }
+          editor.apply();
+
+          String msg;
+          if (collect_raw) {
+            msg = "All app openings will be saved from now on";
+          } else {
+            msg = "App openings won't be saved anymore";
+          }
+          Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
         } else {
           doSearch(query);
         }
@@ -216,9 +236,10 @@ public class MainActivity
     // Save the launch time slot to the database
     if (m_count_decay == null) {
       m_count_decay = new CountAndDecay(DBHelper.getInstance(this));
+      m_count_decay.setRawDataCollection(getPreferences(Context.MODE_PRIVATE).getBoolean(PREFS_COLLECT_RAW, false));
     }
     m_count_decay.countAppLaunch(package_name);
-      
+
     // Now, launch the app.
     Intent launch_intent = getPackageManager().getLaunchIntentForPackage(package_name);
     launch_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -266,9 +287,23 @@ public class MainActivity
     return super.onOptionsItemSelected(item);
   }
 
+  /** We need to find out how the activity was brought to the foreground; by
+   *  the widget or by a launcher/search button. So we need to set the starting
+   *  intent to the intent that brought it to the foreground. */
+  @Override
+  protected void onNewIntent(Intent new_intent) {
+    setIntent(new_intent);
+  }
+
+  public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
+    AppArrayAdapter adapter = new AppArrayAdapter(this, R.id.resultsListView, apps);
+    ListView results_list_view = (ListView)findViewById(R.id.resultsListView);
+    results_list_view.setAdapter(adapter);
+  }
+
   private void sendUsageData() {
     boolean file_copied = false;
-    File external_file = new File(getExternalCacheDir().toString(), "apps.sqlite");
+    File external_file = new File(getExternalCacheDir().toString(), "AppSearch.sqlite");
     if (external_file.exists()) {
       external_file.delete();
     }
@@ -278,8 +313,8 @@ public class MainActivity
     OutputStream os = null;
     try {
       external_file.createNewFile();
-      DBHelper db_helper = DBHelper.getInstance(this);
-      is = new FileInputStream(db_helper.getReadableDatabase().getPath());
+      SQLiteDatabase db = DBHelper.getInstance(getApplicationContext()).getReadableDatabase();
+      is = new FileInputStream(db.getPath());
       os = new FileOutputStream(external_file);
       // Transfer bytes from in to out
       byte[] buf = new byte[1024];
@@ -308,19 +343,5 @@ public class MainActivity
     } else {
       Log.e("AppSearch", "Couldn't copy the database file");
     }
-  }
-
-  /** We need to find out how the activity was brought to the foreground; by
-   *  the widget or by a launcher/search button. So we need to set the starting
-   *  intent to the intent that brought it to the foreground. */
-  @Override
-  protected void onNewIntent(Intent new_intent) {
-    setIntent(new_intent);
-  }
-
-  public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
-    AppArrayAdapter adapter = new AppArrayAdapter(this, R.id.resultsListView, apps);
-    ListView results_list_view = (ListView)findViewById(R.id.resultsListView);
-    results_list_view.setAdapter(adapter);
   }
 }

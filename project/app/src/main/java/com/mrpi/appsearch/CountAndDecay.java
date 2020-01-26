@@ -38,6 +38,9 @@ public class CountAndDecay {
 
   private DBHelper m_db;
 
+  /** Flag to indicate whether we should save all the app openings with their timestamp. */
+  private boolean m_collect_raw_data = false;
+
   public CountAndDecay(DBHelper db) {
     m_db = db;
   }
@@ -57,7 +60,7 @@ public class CountAndDecay {
    *  <p>
    *  This method sets or updates the count field of the three tables to the
    *  proper value for the current time slot and the surrounding time slots.
-   * @param package_name the package name of the app
+   *  @param package_name the package name of the app
    */
   public void countAppLaunch(String package_name) {
     // Perform a decay step if needed
@@ -112,6 +115,14 @@ public class CountAndDecay {
 
       adjacent--;
     }
+
+    if (m_collect_raw_data) {
+      // Register the app launch in the raw table, thus an app launch at a single datetime.
+      ContentValues values = new ContentValues();
+      values.put("package_name", package_name);
+      db.insert(DBHelper.TBL_RAW_DATA, null, values);
+    }
+
     Log.d("AppSearch", "Logged the launch");
   }
 
@@ -183,5 +194,11 @@ public class CountAndDecay {
     }
     cursor.close();
     return days_to_decay;
+  }
+
+  /** Indicate whether we should save all the app openings with their timestamp. This can be used
+   *  for debugging and development, but the data isn't used anywhere in the app. */
+  public void setRawDataCollection(boolean collect_raw_data) {
+    m_collect_raw_data = collect_raw_data;
   }
 }

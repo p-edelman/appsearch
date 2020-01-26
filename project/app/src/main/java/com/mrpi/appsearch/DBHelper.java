@@ -44,6 +44,11 @@ public class DBHelper extends SQLiteOpenHelper {
   private static final String SCHEMA_USAGE =
     "(package_name TEXT, day INTEGER, time_slot INTEGER, score INTEGER, PRIMARY KEY (package_name, day, time_slot))";
 
+  /** Collect raw usage data. */
+  public static final String TBL_RAW_DATA = "usage_raw";
+  private final static String SCHEMA_RAW_DATA =
+    "(package_name TEXT, date DATETIME DEFAULT (datetime('now','localtime')))";
+
   /** The metadata table is a simple text key/numeric value storage. */
   private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";
 
@@ -66,6 +71,7 @@ public class DBHelper extends SQLiteOpenHelper {
     db.execSQL("CREATE TABLE " + TBL_APPS_DIRTY + " " + SCHEMA_INSTALLED + ";");
     db.execSQL("CREATE TABLE " + TBL_USAGE + " " + SCHEMA_USAGE);
     db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
+    db.execSQL("CREATE TABLE " + TBL_RAW_DATA + " " + SCHEMA_RAW_DATA);
     db.setTransactionSuccessful();
     db.endTransaction();
     Log.d("AppSearch", "Database initialized");

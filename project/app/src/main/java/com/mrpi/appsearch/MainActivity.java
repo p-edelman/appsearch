@@ -224,8 +224,9 @@ public class MainActivity
    */
   private void launchApp(AdapterView<?> parent, int position) {
     // Get the app name from the GUI list
-    final String name         = ((AppData)parent.getItemAtPosition(position)).name;
-    final String package_name = ((AppData)parent.getItemAtPosition(position)).package_name;
+    AppData app_data          = (AppData)parent.getItemAtPosition(position);
+    final String name         = app_data.name;
+    final String package_name = app_data.package_name;
     Log.d("AppSearch", "Launching app " + name);
   
     // Show a waiting dialog
@@ -299,6 +300,9 @@ public class MainActivity
     AppArrayAdapter adapter = new AppArrayAdapter(this, R.id.resultsListView, apps);
     ListView results_list_view = (ListView)findViewById(R.id.resultsListView);
     results_list_view.setAdapter(adapter);
+    results_list_view.setSelection(adapter.getCount()); // Because we're using a bottom-to-top list
+                                                        // we need to scroll to bottom after setting
+                                                        // the items.
   }
 
   private void sendUsageData() {

@@ -4,23 +4,19 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity" >
 
-    <SearchView
-        android:id="@+id/appSearchView"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentTop="true"
-        android:iconifiedByDefault="false" >
-
-    </SearchView>
-
     <ListView
         android:id="@+id/resultsListView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_below="@id/appSearchView" >
-
+        android:layout_above="@id/appSearchView">
     </ListView>
+
+    <SearchView
+        android:id="@+id/appSearchView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:iconifiedByDefault="false"
+        android:layout_alignParentBottom="true">
+    </SearchView>
 
 </RelativeLayout>

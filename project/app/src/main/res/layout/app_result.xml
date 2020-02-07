@@ -5,7 +5,17 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:padding="10dp">
-   
+
+     <TextView
+         android:id="@+id/AppRank"
+         android:layout_width="32dp"
+         android:layout_height="32dp"
+         android:layout_marginBottom="1dp"
+         android:layout_marginTop="0dp"
+         android:gravity="center_vertical"
+         android:textColor="#909090"
+         android:textSize="18sp"/>
+
      <ImageView
          android:id="@+id/AppIcon"
          android:layout_width="32dp"
@@ -13,17 +23,18 @@
          android:layout_marginBottom="1dp"
          android:layout_marginRight="15dp"
          android:layout_marginTop="1dp"
-         android:gravity="center_vertical" />
+         android:gravity="center_vertical"/>
        
      <TextView
          android:id="@+id/AppName"
-         android:layout_width="fill_parent"
+         android:layout_width="0dp"
          android:layout_height="32dp"
          android:layout_marginBottom="1dp"
          android:layout_marginTop="1dp"
          android:gravity="center_vertical"
          android:textColor="#000000"
          android:textSize="22sp"
-         android:textStyle="normal" />
-       
+         android:textStyle="normal"
+         android:layout_weight="1"/>
+
 </LinearLayout>

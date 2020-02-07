@@ -48,14 +48,14 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
   public View getView(int position, View convert_view, ViewGroup parent) {
     while (position < m_app_data.size()) {
       AppData app_data = getItem(position);
-      View row_view = renderRow(app_data, parent);
+      View row_view = renderRow(getRevertedPosition(position) + 1, app_data, parent);
       if (row_view != null) {
         return row_view;
       } else {
         // App is not installed anymore
         DBHelper db_helper = DBHelper.getInstance(getContext());
         db_helper.removePackage(app_data.package_name);
-        m_app_data.remove(m_app_data.size() - position - 1);
+        m_app_data.remove(getRevertedPosition(position));
         notifyDataSetChanged();
       }
     }
@@ -65,23 +65,42 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
     return inflater.inflate(R.layout.app_result, parent, false);
   }
 
-  /** Overriden method to revert the order of the items in the list. This is needed to create a
-   *  bottom-to-top list view. */
+  /** Convert the position in the adapter to a "reverted" position in the AppData list, which is
+   *  needed to create a bottom-to-top list.
+   * @param position the position in the adapter
+   * @return the corresponding position in the AppData list. Position 0 will be converted to
+   *         the last position in the list, position 1 to the second-to-last position, etc. */
+  private int getRevertedPosition(int position) {
+    return m_app_data.size() - position - 1;
+  }
+
+  /** Overridden method to map a position in the adapter to a bottom-to-top item in the AppData
+   *  list. This is needed to create the bottom-to-top list view. */
   @Override
   public AppData getItem(int position) {
     if (position < m_app_data.size()) {
-      return m_app_data.get(m_app_data.size() - position - 1);
+      return m_app_data.get(getRevertedPosition(position));
     }
 
     return null;
   }
 
-  private View renderRow(AppData app_data, ViewGroup parent) {
+  /** Render a single row.
+   *  @param rank The human readable rank of the app in the results list
+   *  @param app_data The AppData object describing the app
+   *  @param parent The parent view to attach the view to
+   *  @return the rendered view
+   */
+  private View renderRow(int rank, AppData app_data, ViewGroup parent) {
     // Find the app_result XML resource and extract the views for icon and text
     LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     View row_view = inflater.inflate(R.layout.app_result, parent, false);
+    TextView rank_view   = (TextView)row_view.findViewById(R.id.AppRank);
     ImageView image_view = (ImageView) row_view.findViewById(R.id.AppIcon);
     TextView text_view   = (TextView)row_view.findViewById(R.id.AppName);
+
+    // Render rank
+    rank_view.setText(rank + ".");
 
     Drawable icon;
     try {

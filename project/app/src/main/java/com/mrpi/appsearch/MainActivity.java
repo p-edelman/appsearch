@@ -20,13 +20,17 @@ import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.SearchView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 /** The main Activity for the app.
@@ -52,18 +56,13 @@ public class MainActivity
   private static final int MAX_TOP_APPS = 4;
 
   // Class variables
-  private SearchView     m_search_view;     // The GUI SearchView element
-  private ListView       m_results_view;    // The GUI ListView to present the
-                                            // results of the search.
-  private SearchThread   m_search_thread;   // The background thread to perform
-                                            // the search. It is needed to keep
-                                            // this instance so it can be
-                                            // cancelled when a new query
-                                            // arrives.
-  private ProgressDialog m_launch_progress; // When the user clicks on a result,
-                                            // a waiting spinner is presented
-                                            // to let her know something is
-                                            // happening.
+  private EditText       m_input_box;       // The GUI EditText where the user types the query
+  private ListView       m_results_view;    // The GUI ListView to present the results of the search
+  private SearchThread   m_search_thread;   // The background thread to perform the search. It is
+                                            // needed to keep this instance so it can be
+                                            // cancelled when a new query arrives.
+  private ProgressDialog m_launch_progress; // When the user launches an app, a waiting spinner is
+                                            // presented to let her know something is happening.
   private AboutDialog    m_about_dialog;    // The "about" dialog.
 
   private CountAndDecay  m_count_decay = null;
@@ -84,23 +83,29 @@ public class MainActivity
 
     setContentView(R.layout.activity_main);
 
-    // Attach the search system to the SearchView in the layout
-    SearchManager search_manager = (SearchManager)getSystemService(Context.SEARCH_SERVICE);
-    m_search_view = (SearchView)findViewById(R.id.appSearchView);
-    m_search_view.setSearchableInfo(search_manager.getSearchableInfo(getComponentName()));
-    m_results_view = (ListView)findViewById(R.id.resultsListView);
-   
-    // Attach a listener for when the user starts typing or presses the search
-    // button.
-    final SearchView.OnQueryTextListener queryTextListener = new SearchView.OnQueryTextListener() {
+    // The two main GUI elements: the text box and the result list
+    m_input_box     = (EditText)findViewById(R.id.appSearchView);
+    m_results_view  = (ListView)findViewById(R.id.resultsListView);
+
+    // Attach a listener for when the user starts typing.
+    m_input_box.addTextChangedListener(new TextWatcher() {
       @Override
-      public boolean onQueryTextChange(String query) {
-        doSearch(query);
-        return true;
+      public void onTextChanged(CharSequence char_sequence, int start, int before, int count) {
+        doSearch(char_sequence.toString());
       }
 
       @Override
-      public boolean onQueryTextSubmit(String query) {
+      public void beforeTextChanged(CharSequence char_sequence, int start, int count, int after) {}
+
+      @Override
+      public void afterTextChanged(Editable editable) {}
+    });
+
+    // Add listener for the action button
+    m_input_box.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+      @Override
+      public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
+        String query = textView.getText().toString();
         if (query.equals(COMMAND_SEND_DATA)) {
           sendUsageData();
         } else if (query.equals(COMMAND_COLLECT_RAW) || query.equals(COMMAND_DONT_COLLECT_RAW)) {
@@ -124,8 +129,7 @@ public class MainActivity
         }
         return true;
       }
-    };
-    m_search_view.setOnQueryTextListener(queryTextListener);
+    });
 
     // Attach a listener for when the user clicks on a search result to launch
     // the app.
@@ -135,7 +139,7 @@ public class MainActivity
         launchApp(parent, position);
       }
     };
-    m_results_view.setOnItemClickListener(click_listener);  
+    m_results_view.setOnItemClickListener(click_listener);
 
     // Instantiate the waiting dialog
     m_launch_progress = new ProgressDialog(this);
@@ -186,7 +190,7 @@ public class MainActivity
       adapter.clear();
       adapter.notifyDataSetChanged();
     }
-    m_search_view.setQuery("", false);
+    m_input_box.setText("");
     
     if (m_about_dialog != null) {
       m_about_dialog.dismiss();

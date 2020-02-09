@@ -4,15 +4,15 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity" >
 
-    <SearchView
+    <EditText
         android:id="@+id/appSearchView"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"
         android:layout_alignParentTop="true"
-        android:iconifiedByDefault="false" >
-
-    </SearchView>
+        android:layout_alignParentRight="true"
+        android:hint="@string/search_hint"
+        android:imeOptions="flagNoPersonalizedLearning|flagNoExtractUi|actionGo"
+        android:singleLine="true"></EditText>
 
     <ListView
         android:id="@+id/resultsListView"

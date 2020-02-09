@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable;
 import android.text.Spannable;
 import android.text.style.StyleSpan;
 import android.text.style.UnderlineSpan;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,7 +49,7 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
   public View getView(int position, View convert_view, ViewGroup parent) {
     while (position < m_app_data.size()) {
       AppData app_data = m_app_data.get(position);
-      View row_view = getViewForReal(app_data, parent);
+      View row_view = renderRow(app_data, parent, position == 0);
       if (row_view != null) {
         return row_view;
       } else {
@@ -65,12 +66,34 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
     return inflater.inflate(R.layout.app_result, parent, false);
   }
 
-  public View getViewForReal(AppData app_data, ViewGroup parent) {
+  /** Render a single row in the list.
+   *  @param app_data The AppData for the app that should be drawn
+   *  @param parent The parent of this view
+   *  @param emphasized Whether to emphasize the row
+   *  @return A rendered View, or none if rendering failed
+   */
+  public View renderRow(AppData app_data, ViewGroup parent, boolean emphasized) {
     // Find the app_result XML resource and extract the views for icon and text
     LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     View row_view = inflater.inflate(R.layout.app_result, parent, false);
     ImageView image_view = (ImageView) row_view.findViewById(R.id.AppIcon);
     TextView text_view   = (TextView)row_view.findViewById(R.id.AppName);
+
+    if (emphasized) {
+      double scale = 1.5;
+
+      // Increase image size
+      ViewGroup.LayoutParams image_layout = image_view.getLayoutParams();
+      image_layout.width = (int)(image_layout.width * scale);
+      image_layout.height = (int)(image_layout.height * scale);
+      image_view.setLayoutParams(image_layout);
+
+      // Increase the text size
+      ViewGroup.LayoutParams layout = text_view.getLayoutParams();
+      layout.height = (int)(layout.height * scale);
+      text_view.setLayoutParams(layout);
+      text_view.setTextSize(TypedValue.COMPLEX_UNIT_PX, (float)(text_view.getTextSize() * scale));
+    }
 
     Drawable icon;
     try {

@@ -125,7 +125,10 @@ public class MainActivity
           }
           Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
         } else {
-          doSearch(query);
+          // If there are results, launch the top one
+          if (m_results_view.getCount() > 0) {
+            launchApp((AppData)m_results_view.getAdapter().getItem(0));
+          }
         }
         return true;
       }
@@ -136,7 +139,7 @@ public class MainActivity
     final AdapterView.OnItemClickListener click_listener = new AdapterView.OnItemClickListener() {
       @Override
       public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        launchApp(parent, position);
+        launchApp((AppData)parent.getItemAtPosition(position));
       }
     };
     m_results_view.setOnItemClickListener(click_listener);
@@ -222,14 +225,13 @@ public class MainActivity
     }
   }
   
-  /** Launch the app that the user clicks on in the result list.
-   * @param parent the AdapterView that's the parent of the ListView
-   * @param position the position of the item that's been clicked
+  /** The entry point to launch an app. This takes care of all the housekeeping and makes sure this
+   *  app is properly closed before launching the other app.
    */
-  private void launchApp(AdapterView<?> parent, int position) {
+  private void launchApp(AppData app_data) {
     // Get the app name from the GUI list
-    final String name         = ((AppData)parent.getItemAtPosition(position)).name;
-    final String package_name = ((AppData)parent.getItemAtPosition(position)).package_name;
+    final String name         = app_data.name;
+    final String package_name = app_data.package_name;
     Log.d("AppSearch", "Launching app " + name);
   
     // Show a waiting dialog

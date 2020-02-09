@@ -171,6 +171,9 @@ public class MainActivity
       m_search_thread.execute(MAX_TOP_APPS);
     }
 
+    // Make sure the user can start typing right away
+    m_input_box.requestFocus();
+
     super.onResume();
   }
 

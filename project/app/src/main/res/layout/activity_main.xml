@@ -12,7 +12,7 @@
         android:layout_alignParentRight="true"
         android:hint="@string/search_hint"
         android:imeOptions="flagNoPersonalizedLearning|flagNoExtractUi|actionGo"
-        android:singleLine="true"></EditText>
+        android:singleLine="true"/>
 
     <ListView
         android:id="@+id/resultsListView"

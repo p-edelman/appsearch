@@ -1,20 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="horizontal"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:padding="10dp">
-
-     <TextView
-         android:id="@+id/AppRank"
-         android:layout_width="32dp"
-         android:layout_height="32dp"
-         android:layout_marginBottom="1dp"
-         android:layout_marginTop="0dp"
-         android:gravity="center_vertical"
-         android:textColor="#909090"
-         android:textSize="18sp"/>
+     xmlns:android="http://schemas.android.com/apk/res/android"
+     android:orientation="horizontal"
+     android:layout_width="fill_parent"
+     android:layout_height="fill_parent"
+     android:padding="10dp">
 
      <ImageView
          android:id="@+id/AppIcon"

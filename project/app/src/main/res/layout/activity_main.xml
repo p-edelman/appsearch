@@ -8,7 +8,7 @@
         android:id="@+id/resultsListView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/appSearchView" >
+        android:layout_above="@id/appSearchView" >
     </ListView>
 
     <EditText

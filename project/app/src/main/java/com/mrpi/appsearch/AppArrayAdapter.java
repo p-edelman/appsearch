@@ -16,8 +16,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-/** Adapter to provide the data of the search results and present it in the
- *  proper way.
+/** Adapter to provide the data of the search results and render it for the results list. This
+ *  adapter will revert the order of the items to show the results list as a bottom-to-top list.
  */
 public class AppArrayAdapter extends ArrayAdapter<AppData> {
 
@@ -47,15 +47,15 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
   @Override
   public View getView(int position, View convert_view, ViewGroup parent) {
     while (position < m_app_data.size()) {
-      AppData app_data = m_app_data.get(position);
-      View row_view = renderRow(app_data, parent, position == 0);
+      AppData app_data = getItem(position);
+      View row_view = renderRow(getRevertedPosition(position) + 1, app_data, parent, position == 0);
       if (row_view != null) {
         return row_view;
       } else {
         // App is not installed anymore
         DBHelper db_helper = DBHelper.getInstance(getContext());
         db_helper.removePackage(app_data.package_name);
-        m_app_data.remove(position);
+        m_app_data.remove(getRevertedPosition(position));
         notifyDataSetChanged();
       }
     }
@@ -65,19 +65,44 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
     return inflater.inflate(R.layout.app_result, parent, false);
   }
 
+  /** Convert the position in the adapter to a "reverted" position in the AppData list, which is
+   *  needed to create a bottom-to-top list.
+   * @param position the position in the adapter
+   * @return the corresponding position in the AppData list. Position 0 will be converted to
+   *         the last position in the list, position 1 to the second-to-last position, etc. */
+  private int getRevertedPosition(int position) {
+    return m_app_data.size() - position - 1;
+  }
+
+  /** Overridden method to map a position in the adapter to a bottom-to-top item in the AppData
+   *  list. This is needed to create the bottom-to-top list view. */
+  @Override
+  public AppData getItem(int position) {
+    if (position < m_app_data.size()) {
+      return m_app_data.get(getRevertedPosition(position));
+    }
+
+    return null;
+  }
+
   /** Render a single row in the list.
-   *  @param app_data The AppData for the app that should be drawn
-   *  @param parent The parent of this view
+   *  @param rank The human readable rank of the app in the results list
+   *  @param app_data The AppData object describing the app
+   *  @param parent The parent view to attach the view to
    *  @param selected Render the row as the "selected" row
-   *  @return A rendered View, or none if rendering failed
+   *  @return the rendered view, or None if rendering failed
    */
-  public View renderRow(AppData app_data, ViewGroup parent, boolean selected) {
+  private View renderRow(int rank, AppData app_data, ViewGroup parent, boolean selected) {
     // Find the app_result XML resource and extract the views for icon and text
     LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     View row_view = inflater.inflate((selected) ? R.layout.app_result_selected : R.layout.app_result,
             parent, false);
+    TextView rank_view   = (TextView)row_view.findViewById(R.id.AppRank);
     ImageView image_view = (ImageView) row_view.findViewById(R.id.AppIcon);
     TextView text_view   = (TextView)row_view.findViewById(R.id.AppName);
+
+    // Render rank
+    rank_view.setText(rank + ".");
 
     Drawable icon;
     try {

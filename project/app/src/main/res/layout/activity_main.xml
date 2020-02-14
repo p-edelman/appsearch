@@ -4,23 +4,20 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity" >
 
-    <EditText
-        android:id="@+id/appSearchView"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        android:hint="@string/search_hint"
-        android:imeOptions="flagNoPersonalizedLearning|flagNoExtractUi|actionGo"
-        android:singleLine="true"/>
-
     <ListView
         android:id="@+id/resultsListView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
         android:layout_below="@id/appSearchView" >
-
     </ListView>
+
+    <EditText
+        android:id="@+id/appSearchView"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/search_hint"
+        android:imeOptions="flagNoPersonalizedLearning|flagNoExtractUi|actionGo"
+        android:singleLine="true"
+        android:layout_alignParentBottom="true"/>
 
 </RelativeLayout>

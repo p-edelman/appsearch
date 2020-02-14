@@ -132,7 +132,7 @@ public class MainActivity
         }
         return true;
       }
-    });
+    };
 
     // Attach a listener for when the user clicks on a search result to launch
     // the app.
@@ -308,6 +308,9 @@ public class MainActivity
     AppArrayAdapter adapter = new AppArrayAdapter(this, R.id.resultsListView, apps);
     ListView results_list_view = (ListView)findViewById(R.id.resultsListView);
     results_list_view.setAdapter(adapter);
+    results_list_view.setSelection(adapter.getCount()); // Because we're using a bottom-to-top list
+                                                        // we need to scroll to bottom after setting
+                                                        // the items.
   }
 
   private void sendUsageData() {

@@ -48,7 +48,7 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
   public View getView(int position, View convert_view, ViewGroup parent) {
     while (position < m_app_data.size()) {
       AppData app_data = getItem(position);
-      View row_view = renderRow(getRevertedPosition(position) + 1, app_data, parent, position == 0);
+      View row_view = renderRow(app_data, parent, getRevertedPosition(position) == 0);
       if (row_view != null) {
         return row_view;
       } else {
@@ -86,23 +86,18 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
   }
 
   /** Render a single row in the list.
-   *  @param rank The human readable rank of the app in the results list
    *  @param app_data The AppData object describing the app
    *  @param parent The parent view to attach the view to
    *  @param selected Render the row as the "selected" row
    *  @return the rendered view, or None if rendering failed
    */
-  private View renderRow(int rank, AppData app_data, ViewGroup parent, boolean selected) {
+  private View renderRow(AppData app_data, ViewGroup parent, boolean selected) {
     // Find the app_result XML resource and extract the views for icon and text
     LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     View row_view = inflater.inflate((selected) ? R.layout.app_result_selected : R.layout.app_result,
             parent, false);
-    TextView rank_view   = (TextView)row_view.findViewById(R.id.AppRank);
-    ImageView image_view = (ImageView) row_view.findViewById(R.id.AppIcon);
+    ImageView image_view = (ImageView)row_view.findViewById(R.id.AppIcon);
     TextView text_view   = (TextView)row_view.findViewById(R.id.AppName);
-
-    // Render rank
-    rank_view.setText(rank + ".");
 
     Drawable icon;
     try {

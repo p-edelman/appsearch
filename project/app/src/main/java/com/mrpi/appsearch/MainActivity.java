@@ -27,6 +27,7 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -52,27 +53,41 @@ public class MainActivity
         extends Activity
         implements SearchThreadListener {
 
+  //--- Default values -----------------------------------------------------------------------------
   /** The maximum number of most used apps to show when opening the activity. */
   private static final int MAX_TOP_APPS = 4;
 
-  // Class variables
-  private EditText       m_input_box;       // The GUI EditText where the user types the query
-  private ListView       m_results_view;    // The GUI ListView to present the results of the search
-  private SearchThread   m_search_thread;   // The background thread to perform the search. It is
-                                            // needed to keep this instance so it can be
-                                            // cancelled when a new query arrives.
-  private ProgressDialog m_launch_progress; // When the user launches an app, a waiting spinner is
-                                            // presented to let her know something is happening.
-  private AboutDialog    m_about_dialog;    // The "about" dialog.
+  // --- The GUI Elements --------------------------------------------------------------------------
+  /** The EditText where the user types the query */
+  private EditText m_input_box = null;
 
-  private CountAndDecay  m_count_decay = null;
+  /** The ListView to present the results of the search */
+  private ListView m_results_view = null;
 
-  /** Command that can be typed into the search box for additional functionality */
+  /** The "about" dialog. */
+  private AboutDialog m_about_dialog = null;
+
+  //--- The other class variables ------------------------------------------------------------------
+  /** The background thread to perform the search. It is needed to keep this instance so it can be
+      cancelled when a new query arrives. */
+  private SearchThread m_search_thread = null;
+
+  /** The results of a search operation. */
+  private ArrayList<AppData> m_search_results = new ArrayList<>();
+
+  /** When the user launches an app, a waiting spinner is presented to let her know something is
+      happening. */
+  private ProgressDialog m_launch_progress = null;
+
+  /** The CountAndDecay instance to calculate the weights of the app openings. */
+  private CountAndDecay m_count_decay = null;
+
+  //--- Commands that can be typed into the search box for additional functionality ----------------
   private final static String COMMAND_SEND_DATA        = "send database";
   private final static String COMMAND_COLLECT_RAW      = "collect raw data";
   private final static String COMMAND_DONT_COLLECT_RAW = "don't collect raw data";
 
-  /** Keys for individual preferences */
+  //--- Keys for individual preferences ------------------------------------------------------------
   private final static String PREFS_COLLECT_RAW = "collect_raw_data";
 
   @Override
@@ -126,13 +141,13 @@ public class MainActivity
           Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
         } else {
           // If there are results, launch the top one
-          if (m_results_view.getCount() > 0) {
-            launchApp((AppData)m_results_view.getAdapter().getItem(0));
+          if (m_search_results.size() > 0) {
+            launchApp(m_search_results.get(0));
           }
         }
         return true;
       }
-    };
+    });
 
     // Attach a listener for when the user clicks on a search result to launch
     // the app.
@@ -305,6 +320,7 @@ public class MainActivity
   }
 
   public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
+    m_search_results = apps;
     AppArrayAdapter adapter = new AppArrayAdapter(this, R.id.resultsListView, apps);
     ListView results_list_view = (ListView)findViewById(R.id.resultsListView);
     results_list_view.setAdapter(adapter);

@@ -85,7 +85,6 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
     ImageView image_view = (ImageView)row_view.findViewById(R.id.AppIcon);
     Drawable icon;
     try {
-      // Set icon
       icon = m_package_manager.getApplicationIcon(app_data.package_name);
       image_view.setImageDrawable(icon);
     } catch (NameNotFoundException e) {

@@ -11,13 +11,14 @@ import java.util.ArrayList;
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.ProgressDialog;
-import android.app.SearchManager;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
@@ -28,7 +29,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -56,14 +59,17 @@ public class MainActivity
   private static final int MAX_TOP_APPS = 4;
 
   // Class variables
-  private EditText       m_input_box;       // The GUI EditText where the user types the query
-  private ListView       m_results_view;    // The GUI ListView to present the results of the search
-  private SearchThread   m_search_thread;   // The background thread to perform the search. It is
-                                            // needed to keep this instance so it can be
-                                            // cancelled when a new query arrives.
-  private ProgressDialog m_launch_progress; // When the user launches an app, a waiting spinner is
-                                            // presented to let her know something is happening.
-  private AboutDialog    m_about_dialog;    // The "about" dialog.
+  private EditText           m_input_box;       // The GUI EditText where the user types the query
+  private ListView           m_results_view;    // The GUI ListView to present the results of the
+                                                // search
+  private SearchThread       m_search_thread;   // The background thread to perform the search. It
+                                                // is needed to keep this instance so it can be
+                                                // cancelled when a new query arrives.
+  private ArrayList<AppData> m_apps;            // The list of matched apps.
+  private ProgressDialog     m_launch_progress; // When the user launches an app, a waiting spinner
+                                                // is presented to let her know something is
+                                                // happening.
+  private AboutDialog    m_about_dialog;        // The "about" dialog.
 
   private CountAndDecay  m_count_decay = null;
 
@@ -106,32 +112,17 @@ public class MainActivity
       @Override
       public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
         String query = textView.getText().toString();
-        if (query.equals(COMMAND_SEND_DATA)) {
-          sendUsageData();
-        } else if (query.equals(COMMAND_COLLECT_RAW) || query.equals(COMMAND_DONT_COLLECT_RAW)) {
-          boolean collect_raw = query.equals(COMMAND_COLLECT_RAW);
-          SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
-          editor.putBoolean(PREFS_COLLECT_RAW, collect_raw);
-          if (m_count_decay != null) {
-            m_count_decay.setRawDataCollection(collect_raw);
-          }
-          editor.apply();
-
-          String msg;
-          if (collect_raw) {
-            msg = "All app openings will be saved from now on";
-          } else {
-            msg = "App openings won't be saved anymore";
-          }
-          Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
-        } else {
-          // If there are results, launch the top one
-          if (m_results_view.getCount() > 0) {
-            launchApp((AppData)m_results_view.getAdapter().getItem(0));
-          }
-        }
+        actionCallback(query);
         return true;
       }
+    });
+
+    Button launch_button = (Button)findViewById(R.id.launchButton);
+    launch_button.setOnClickListener(new View.OnClickListener() {
+        public void onClick(View v) {
+            String query = m_input_box.getText().toString();
+            actionCallback(query);
+        }
     });
 
     // Attach a listener for when the user clicks on a search result to launch
@@ -149,7 +140,38 @@ public class MainActivity
     m_launch_progress.setIndeterminate(true);
     m_launch_progress.setCancelable(false);
   }
-  
+
+    /** Callback for when the "action" of the app is activated, using the keyboard or the action
+     *  button.
+     *  @param query the query string from the input box to act on.
+     */
+  private void actionCallback(String query) {
+        if (query.equals(COMMAND_SEND_DATA)) {
+            sendUsageData();
+        } else if (query.equals(COMMAND_COLLECT_RAW) || query.equals(COMMAND_DONT_COLLECT_RAW)) {
+            boolean collect_raw = query.equals(COMMAND_COLLECT_RAW);
+            SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
+            editor.putBoolean(PREFS_COLLECT_RAW, collect_raw);
+            if (m_count_decay != null) {
+                m_count_decay.setRawDataCollection(collect_raw);
+            }
+            editor.apply();
+
+            String msg;
+            if (collect_raw) {
+                msg = "All app openings will be saved from now on";
+            } else {
+                msg = "App openings won't be saved anymore";
+            }
+            Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+        } else {
+            // If there are results, launch the top one
+            if (m_apps.size() > 0) {
+                launchApp(m_apps.get(0));
+            }
+        }
+    }
+
   @Override
   protected void onResume() {
     // App should have been reset on exit, but occasionally the app is not
@@ -213,6 +235,8 @@ public class MainActivity
    */
   private void doSearch(final String query) {
     if (query.length() > 0) {
+      ((InputBox)findViewById(R.id.appSearchView)).renderClear(false);
+
       if (m_search_thread != null) {
         m_search_thread.cancel(true);
       }
@@ -225,6 +249,8 @@ public class MainActivity
       if (adapter != null) {
         adapter.renderClear();
       }
+
+      ((InputBox)findViewById(R.id.appSearchView)).renderClear(true);
     }
   }
   
@@ -305,9 +331,34 @@ public class MainActivity
   }
 
   public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
-    AppArrayAdapter adapter = new AppArrayAdapter(this, R.id.resultsListView, apps);
+    m_apps = apps;
+
+    // Set the first result to the "selected" app
+    InputBox input_box = (InputBox)findViewById(R.id.appSearchView);
+    ImageView selected_icon = (ImageView)findViewById(R.id.selectedAppIcon);
+    if (apps.size() > 0) {
+      input_box.setMatchingApp(apps.get(0));
+      try {
+        Drawable icon = getPackageManager().getApplicationIcon(apps.get(0).package_name);
+        selected_icon.setImageDrawable(icon);
+      } catch (PackageManager.NameNotFoundException e) {
+         // TODO: Clear icon
+      }
+    } else {
+      input_box.setMatchingApp(null);
+      // TODO: Clear icon
+    }
+
+    // Fill the list view with the rest of the results
+    AppArrayAdapter adapter;
+    if (apps.size() > 0) {
+        adapter = new AppArrayAdapter(this, R.id.resultsListView, apps.subList(1, apps.size()));
+    } else {
+        adapter = new AppArrayAdapter(this, R.id.resultsListView, new ArrayList<AppData>());
+    }
     ListView results_list_view = (ListView)findViewById(R.id.resultsListView);
     results_list_view.setAdapter(adapter);
+
   }
 
   private void sendUsageData() {

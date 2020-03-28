@@ -4,22 +4,48 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity" >
 
-    <EditText
-        android:id="@+id/appSearchView"
-        android:layout_width="fill_parent"
+    <LinearLayout
+        android:id="@+id/inputAreaView"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        android:hint="@string/search_hint"
-        android:imeOptions="flagNoPersonalizedLearning|flagNoExtractUi|actionGo"
-        android:singleLine="true"/>
+        android:background="@drawable/input_box_outer"
+        android:paddingLeft="10dp"
+        android:paddingTop="15dp"
+        android:paddingRight="10dp"
+        android:paddingBottom="15dp">
+
+        <ImageView
+            android:id="@+id/selectedAppIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp" />
+
+        <com.mrpi.appsearch.InputBox
+            android:id="@+id/appSearchView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="10dp"
+            android:layout_weight="2"
+            android:background="@drawable/input_box_inner"
+            android:hint="@string/search_hint"
+            android:imeOptions="flagNoPersonalizedLearning|flagNoExtractUi|actionGo"
+            android:singleLine="true"
+            android:textColor="@android:color/darker_gray"
+            android:textSize="28dp" />
+
+        <Button
+            android:id="@+id/launchButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Go!" />
+    </LinearLayout>
 
     <ListView
         android:id="@+id/resultsListView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
-        android:layout_below="@id/appSearchView" >
+        android:layout_below="@id/inputAreaView" >
 
     </ListView>
 

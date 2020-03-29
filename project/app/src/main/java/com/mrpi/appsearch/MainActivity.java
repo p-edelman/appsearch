@@ -30,7 +30,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -59,7 +58,7 @@ public class MainActivity
   private static final int MAX_TOP_APPS = 4;
 
   // Class variables
-  private EditText           m_input_box;       // The GUI EditText where the user types the query
+  private InputBox           m_input_box;       // The GUI EditText where the user types the query
   private ListView           m_results_view;    // The GUI ListView to present the results of the
                                                 // search
   private SearchThread       m_search_thread;   // The background thread to perform the search. It
@@ -90,7 +89,7 @@ public class MainActivity
     setContentView(R.layout.activity_main);
 
     // The two main GUI elements: the text box and the result list
-    m_input_box     = (EditText)findViewById(R.id.appSearchView);
+    m_input_box     = (InputBox)findViewById(R.id.appSearchView);
     m_results_view  = (ListView)findViewById(R.id.resultsListView);
 
     // Attach a listener for when the user starts typing.
@@ -235,7 +234,7 @@ public class MainActivity
    */
   private void doSearch(final String query) {
     if (query.length() > 0) {
-      ((InputBox)findViewById(R.id.appSearchView)).renderClear(false);
+      m_input_box.renderClear(false);
 
       if (m_search_thread != null) {
         m_search_thread.cancel(true);
@@ -250,7 +249,7 @@ public class MainActivity
         adapter.renderClear();
       }
 
-      ((InputBox)findViewById(R.id.appSearchView)).renderClear(true);
+      m_input_box.renderClear(true);
     }
   }
   
@@ -334,10 +333,9 @@ public class MainActivity
     m_apps = apps;
 
     // Set the first result to the "selected" app
-    InputBox input_box = (InputBox)findViewById(R.id.appSearchView);
     ImageView selected_icon = (ImageView)findViewById(R.id.selectedAppIcon);
     if (apps.size() > 0) {
-      input_box.setMatchingApp(apps.get(0));
+      m_input_box.setMatchingApp(apps.get(0));
       try {
         Drawable icon = getPackageManager().getApplicationIcon(apps.get(0).package_name);
         selected_icon.setImageDrawable(icon);
@@ -345,7 +343,7 @@ public class MainActivity
          // TODO: Clear icon
       }
     } else {
-      input_box.setMatchingApp(null);
+      m_input_box.setMatchingApp(null);
       // TODO: Clear icon
     }
 

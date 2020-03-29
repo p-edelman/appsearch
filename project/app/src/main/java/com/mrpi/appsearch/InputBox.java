@@ -73,11 +73,23 @@ public class InputBox extends EditText {
     /** Whether to render the matching app without highlighting the matched letters.
      *  @param render_clear if true, render without highlighting. */
     public void renderClear(boolean render_clear) {
-        m_render_clear = render_clear;
-        m_text_view = renderText(false);
-        m_cursor_pos = 0;
+        if (render_clear != m_render_clear) { // Only redraw if there's a change
+            m_render_clear = render_clear;
 
-        invalidate();
+            // Redraw the text, using the m_render_clear flag
+            m_text_view = renderText(false);
+
+            if (render_clear) {
+                // If we're rendering clear, we know the cursor position should be 0
+                m_cursor_pos = 0;
+            } else {
+                // Otherwise, it needs to be calculated
+                m_cursor_pos = -1;
+            }
+            m_cursor_on = true;
+
+            invalidate();
+        }
     }
 
     /** Perform the rendering of the app name and highlight the matching letters.

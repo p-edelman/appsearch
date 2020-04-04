@@ -340,11 +340,11 @@ public class MainActivity
         Drawable icon = getPackageManager().getApplicationIcon(apps.get(0).package_name);
         selected_icon.setImageDrawable(icon);
       } catch (PackageManager.NameNotFoundException e) {
-         // TODO: Clear icon
+        selected_icon.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_delete));
       }
     } else {
       m_input_box.setMatchingApp(null);
-      // TODO: Clear icon
+      selected_icon.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_delete));
     }
 
     // Fill the list view with the rest of the results

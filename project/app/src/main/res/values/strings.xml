@@ -10,6 +10,7 @@
   <string name="search_button">Search Button</string>
   <string name="search_button_label">Find apps</string>
   <string name="action_settings">Settings</string>
+  <string name="no_match">no match</string>
 
   <!-- Stuff for the smart icon configuration. -->
   <string name="smart_icon">Smart icon</string>

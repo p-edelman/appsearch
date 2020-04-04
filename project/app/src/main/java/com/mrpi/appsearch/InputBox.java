@@ -1,6 +1,6 @@
 package com.mrpi.appsearch;
 
-import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.text.Spannable;
 import android.text.TextPaint;
@@ -92,39 +92,58 @@ public class InputBox extends EditText {
         }
     }
 
-    /** Perform the rendering of the app name and highlight the matching letters.
+    /** Perform the rendering of the app name and highlight the matching letters, or render a
+     *  "no match" message if there is no matching app.
+     *  The suggested part of the text is rendered using the textColorHint, while the matching
+     *  letters are rendered using the textColor. The warning message is rendered using
+     *  textColorHighlight.
      *  @param is_capped if true, only render the app name up to the last matching letter.
      *  @return a TextView with the rendered app name.
      */
     private TextView renderText(boolean is_capped) {
         TextView text_view = new TextView(getContext());
 
-        if (m_matching_app == null) {
-            return text_view;
-        }
-
         // Use the rendering parameters declared for this EditText.
         text_view.setTypeface(getTypeface());
         text_view.setTextSize(TypedValue.COMPLEX_UNIT_PX, getTextSize());
-        text_view.setTextColor(getCurrentTextColor());
 
-        // Set the text
-        if (is_capped) {
-            if (m_matching_app.char_matches != null && m_render_clear == false) {
-                int to_pos = m_matching_app.char_matches.get(m_matching_app.char_matches.size() - 1) + 1;
-                text_view.setText(m_matching_app.name.substring(0, to_pos), BufferType.SPANNABLE);
+        if (m_matching_app != null) {
+            text_view.setTextColor(getCurrentHintTextColor());
+
+            // Set the text
+            if (is_capped) {
+                if (m_matching_app.char_matches != null && m_render_clear == false) {
+                    int to_pos = m_matching_app.char_matches.get(m_matching_app.char_matches.size() - 1) + 1;
+                    text_view.setText(m_matching_app.name.substring(0, to_pos), BufferType.SPANNABLE);
+                }
+            } else {
+                text_view.setText(m_matching_app.name, BufferType.SPANNABLE);
             }
-        } else {
-            text_view.setText(m_matching_app.name, BufferType.SPANNABLE);
-        }
 
-        // Highlight matched letters
-        if (m_matching_app.char_matches != null && m_render_clear == false) {
-            Spannable spannable = (Spannable)text_view.getText();
-            for (Integer i : m_matching_app.char_matches) {
-                spannable.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                spannable.setSpan(new UnderlineSpan(), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                spannable.setSpan(new ForegroundColorSpan(Color.BLACK), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            // Highlight matched letters
+            if (m_matching_app.char_matches != null && m_render_clear == false) {
+                Spannable spannable = (Spannable) text_view.getText();
+                for (Integer i : m_matching_app.char_matches) {
+                    spannable.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    spannable.setSpan(new UnderlineSpan(), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    spannable.setSpan(new ForegroundColorSpan(getCurrentTextColor()), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+            }
+        } else if (getText().length() > 0) {
+            // Render a special string to indicate that there's no match (but only if there's actual
+            // text typed.
+
+            text_view.setTextColor(getCurrentTextColor());
+
+            if (is_capped) {
+                text_view.setText(getText());
+            } else {
+                text_view.setText(getText());
+                text_view.setText(String.format("%s: %s", getText(), getContext().getString(R.string.no_match)), BufferType.SPANNABLE);
+                Spannable spannable = (Spannable) text_view.getText();
+                spannable.setSpan(new ForegroundColorSpan(getCurrentHintTextColor()), getText().length(), getText().length() + 2, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                spannable.setSpan(new StyleSpan(Typeface.ITALIC), getText().length() + 2, text_view.getText().length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                spannable.setSpan(new ForegroundColorSpan(getHighlightColor()), getText().length() + 2, text_view.getText().length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
 
@@ -134,33 +153,31 @@ public class InputBox extends EditText {
     /** Render our text box. This method is called by Android again on each cursor blink. */
     @Override
     public void onDraw(Canvas canvas) {
-        if (m_matching_app != null) {
-            if (m_text_view.getWidth() == 0) {
-                m_text_view.measure(canvas.getWidth(), canvas.getHeight());
-                m_text_view.layout(0, 0, canvas.getWidth(), canvas.getHeight());
-            }
-
-            // Render the cursor
-            if (m_cursor_pos == -1) {
-                // Calculate the cursor position by rendering a capped version of the text and
-                // measuring its width.
-                TextView cursor_text = renderText(true);
-                cursor_text.measure(canvas.getWidth(), canvas.getHeight());
-                m_cursor_pos = cursor_text.getMeasuredWidth();
-            }
-            if (m_cursor_on) {
-                int left = m_text_padding_left + m_cursor_pos;
-                m_cursor_drawable.setBounds(left, (int)m_font_metrics.descent, left + m_cursor_drawable.getIntrinsicWidth(), (int)(m_font_metrics.descent - m_font_metrics.ascent));
-                m_cursor_drawable.draw(canvas);
-                m_cursor_on = false;
-            } else {
-                m_cursor_on = true;
-            }
-
-            // Add some space to the left of the text
-            canvas.translate(m_text_padding_left, 0);
-
-            m_text_view.draw(canvas);
+        if (m_text_view.getWidth() == 0) {
+            m_text_view.measure(canvas.getWidth(), canvas.getHeight());
+            m_text_view.layout(0, 0, canvas.getWidth(), canvas.getHeight());
         }
+
+        // Render the cursor
+        if (m_cursor_pos == -1) {
+            // Calculate the cursor position by rendering a capped version of the text and
+            // measuring its width.
+            TextView cursor_text = renderText(true);
+            cursor_text.measure(canvas.getWidth(), canvas.getHeight());
+            m_cursor_pos = cursor_text.getMeasuredWidth();
+        }
+        if (m_cursor_on) {
+            int left = m_text_padding_left + m_cursor_pos;
+            m_cursor_drawable.setBounds(left, (int)m_font_metrics.descent, left + m_cursor_drawable.getIntrinsicWidth(), (int)(m_font_metrics.descent - m_font_metrics.ascent));
+            m_cursor_drawable.draw(canvas);
+            m_cursor_on = false;
+        } else {
+            m_cursor_on = true;
+        }
+
+        // Add some space to the left of the text
+        canvas.translate(m_text_padding_left, 0);
+
+        m_text_view.draw(canvas);
     }
 }

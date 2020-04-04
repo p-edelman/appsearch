@@ -30,7 +30,9 @@
             android:hint="@string/search_hint"
             android:imeOptions="flagNoPersonalizedLearning|flagNoExtractUi|actionGo"
             android:singleLine="true"
-            android:textColor="@android:color/darker_gray"
+            android:textColor="@android:color/black"
+            android:textColorHighlight="#F47979"
+            android:textColorHint="@android:color/tertiary_text_light"
             android:textSize="28dp" />
 
         <Button

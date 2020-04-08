@@ -153,30 +153,48 @@ public class InputBox extends EditText {
     /** Render our text box. This method is called by Android again on each cursor blink. */
     @Override
     public void onDraw(Canvas canvas) {
-        if (m_text_view.getWidth() == 0) {
-            m_text_view.measure(canvas.getWidth(), canvas.getHeight());
-            m_text_view.layout(0, 0, canvas.getWidth(), canvas.getHeight());
-        }
+        // The actual width of the canvas that we can use
+        int canvas_width = canvas.getWidth() - m_text_padding_left;
 
-        // Render the cursor
+        // If we don't have a cursor position, calculate it by rendering a capped version of the
+        // text and measuring its width..
         if (m_cursor_pos == -1) {
-            // Calculate the cursor position by rendering a capped version of the text and
-            // measuring its width.
             TextView cursor_text = renderText(true);
             cursor_text.measure(canvas.getWidth(), canvas.getHeight());
             m_cursor_pos = cursor_text.getMeasuredWidth();
         }
+
+        if (m_text_view.getWidth() == 0) {
+            m_text_view.measure(canvas.getWidth(), canvas.getHeight());
+
+            // If the cursor falls outside of the viewport, we will shift the canvas left in the
+            // next step, so that it's still visible, but we have to use a larger size to accomodate
+            // the extra space.
+            int width = (m_cursor_pos + m_text_padding_left > canvas_width) ? m_cursor_pos + m_text_padding_left : canvas_width;
+            m_text_view.layout(0, 0, width , canvas.getHeight());
+        }
+
+        // Position the canvas; add some space to the left, unless the cursor falls outside the
+        // viewport, in which case we will shift the text as far left as needed to make the cursor
+        // visible again.
+        if (m_cursor_pos > canvas_width) {
+            // Note: using canvas_width instead of canvas.getWidth() actually shifts the canvas too
+            // much left, by an amount of m_text_padding_left. It works out because we need a
+            // little bit of extra space to the right so the cursor doesn't touch the edge.
+            canvas.translate(canvas_width - m_cursor_pos, 0);
+        } else {
+            canvas.translate(m_text_padding_left, 0);
+        }
+
+        // Render the cursor
         if (m_cursor_on) {
-            int left = m_text_padding_left + m_cursor_pos;
+            int left = m_cursor_pos;
             m_cursor_drawable.setBounds(left, (int)m_font_metrics.descent, left + m_cursor_drawable.getIntrinsicWidth(), (int)(m_font_metrics.descent - m_font_metrics.ascent));
             m_cursor_drawable.draw(canvas);
             m_cursor_on = false;
         } else {
             m_cursor_on = true;
         }
-
-        // Add some space to the left of the text
-        canvas.translate(m_text_padding_left, 0);
 
         m_text_view.draw(canvas);
     }

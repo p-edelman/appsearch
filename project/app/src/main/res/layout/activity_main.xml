@@ -27,19 +27,18 @@
             android:layout_marginLeft="10dp"
             android:layout_weight="2"
             android:background="@drawable/input_box_inner"
-            android:hint="@string/search_hint"
             android:imeOptions="flagNoPersonalizedLearning|flagNoExtractUi|actionGo"
             android:singleLine="true"
             android:textColor="@android:color/black"
             android:textColorHighlight="#F47979"
             android:textColorHint="@android:color/tertiary_text_light"
-            android:textSize="28dp" />
+            android:textSize="25dp" />
 
         <Button
             android:id="@+id/launchButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Go!" />
+            android:text="@string/action_label" />
     </LinearLayout>
 
     <ListView

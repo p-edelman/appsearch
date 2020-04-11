@@ -15,13 +15,14 @@ import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.widget.TextView;
 
-/** EditText widget with custom rendering, which is meant to be used as the main input/search box
- *  for the app.
+/**
+ * EditText widget with custom rendering, which is meant to be used as the main input/search box
+ * for the app.
  *
- *  Instead of rendering the typed text like a normal input box, it shows the best match for the
- *  input and only highlights the letters that match.
+ * Instead of rendering the typed text like a normal input box, it shows the best match for the
+ * input and only highlights the letters that match.
  *
- *  This is a "dumb" class that only provides rendering, not matching of input.
+ * This is a "dumb" class that only provides rendering, not matching of input.
  */
 public class InputBox extends EditText {
 
@@ -32,22 +33,24 @@ public class InputBox extends EditText {
     private boolean m_render_clear = false;
 
     /** The text view holding the rendered text with matching characters highlighted. This is cached
-     *  because onDraw() is called again by Android on each cursor blink. */
+     *  because onDraw() is called again by Android on each cursor blink */
     private TextView m_text_view;
 
-    /** Variables needed to paint a blinking cursor. */
-    Paint.FontMetrics m_font_metrics;     // Font metrics for this EditText
-    private int       m_cursor_pos;       // The position in pixels of the cursor. -1 is used to
-                                          // indicate that is should be calculated.
-    private boolean   m_cursor_on = true; // Whether the cursor currently should be shown or not.
+    /**
+     * Variables needed to paint a blinking cursor.
+     */
+    Paint.FontMetrics m_font_metrics;   // Font metrics for this EditText
+    private int m_cursor_pos;           // The position in pixels of the cursor. -1 is used to
+                                        // indicate that is should be calculated.
+    private boolean m_cursor_on = true; // Whether the cursor currently should be shown or not.
 
     // The Drawable used as text cursor. Note: this should normally be set using the
     // "textCursorDrawabale" EditText property, but there's no way to obtain it prior to API
     // level 29.
-    private Drawable  m_cursor_drawable = getResources().getDrawable(R.drawable.text_cursor);
+    private Drawable m_cursor_drawable = getResources().getDrawable(R.drawable.text_cursor);
 
     /** Allow for some margin before we start drawing text on the canvas. */
-    private int m_text_padding_left = 5 * (int)getResources().getDisplayMetrics().density;
+    private int m_text_padding_left = 5 * (int) getResources().getDisplayMetrics().density;
 
     public InputBox(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -56,8 +59,11 @@ public class InputBox extends EditText {
         m_font_metrics = text_paint.getFontMetrics();
     }
 
-    /** Set the best matching app for the input text.
-     *  @param app_data the AppData object for the best match. */
+    /**
+     * Set the best matching app for the input text.
+     *
+     * @param app_data the AppData object for the best match.
+     */
     public void setMatchingApp(AppData app_data) {
         m_matching_app = app_data;
 
@@ -70,8 +76,11 @@ public class InputBox extends EditText {
         invalidate();
     }
 
-    /** Whether to render the matching app without highlighting the matched letters.
-     *  @param render_clear if true, render without highlighting. */
+    /**
+     * Whether to render the matching app without highlighting the matched letters.
+     *
+     * @param render_clear if true, render without highlighting.
+     */
     public void renderClear(boolean render_clear) {
         if (render_clear != m_render_clear) { // Only redraw if there's a change
             m_render_clear = render_clear;
@@ -92,13 +101,15 @@ public class InputBox extends EditText {
         }
     }
 
-    /** Perform the rendering of the app name and highlight the matching letters, or render a
-     *  "no match" message if there is no matching app.
-     *  The suggested part of the text is rendered using the textColorHint, while the matching
-     *  letters are rendered using the textColor. The warning message is rendered using
-     *  textColorHighlight.
-     *  @param is_capped if true, only render the app name up to the last matching letter.
-     *  @return a TextView with the rendered app name.
+    /**
+     * Perform the rendering of the app name and highlight the matching letters, or render a
+     * "no match" message if there is no matching app.
+     * The suggested part of the text is rendered using the textColorHint, while the matching
+     * letters are rendered using the textColor. The warning message is rendered using
+     * textColorHighlight.
+     *
+     * @param is_capped if true, only render the app name up to the last matching letter.
+     * @return a TextView with the rendered app name.
      */
     private TextView renderText(boolean is_capped) {
         TextView text_view = new TextView(getContext());
@@ -150,7 +161,9 @@ public class InputBox extends EditText {
         return text_view;
     }
 
-    /** Render our text box. This method is called by Android again on each cursor blink. */
+    /**
+     * Render our text box. This method is called by Android again on each cursor blink.
+     */
     @Override
     public void onDraw(Canvas canvas) {
         // The actual width of the canvas that we can use
@@ -171,7 +184,7 @@ public class InputBox extends EditText {
             // next step, so that it's still visible, but we have to use a larger size to accomodate
             // the extra space.
             int width = (m_cursor_pos + m_text_padding_left > canvas_width) ? m_cursor_pos + m_text_padding_left : canvas_width;
-            m_text_view.layout(0, 0, width , canvas.getHeight());
+            m_text_view.layout(0, 0, width, canvas.getHeight());
         }
 
         // Position the canvas; add some space to the left, unless the cursor falls outside the
@@ -189,7 +202,7 @@ public class InputBox extends EditText {
         // Render the cursor
         if (m_cursor_on) {
             int left = m_cursor_pos;
-            m_cursor_drawable.setBounds(left, (int)m_font_metrics.descent, left + m_cursor_drawable.getIntrinsicWidth(), (int)(m_font_metrics.descent - m_font_metrics.ascent));
+            m_cursor_drawable.setBounds(left, (int) m_font_metrics.descent, left + m_cursor_drawable.getIntrinsicWidth(), (int) (m_font_metrics.descent - m_font_metrics.ascent));
             m_cursor_drawable.draw(canvas);
             m_cursor_on = false;
         } else {

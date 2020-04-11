@@ -30,7 +30,7 @@
             android:layout_height="@android:dimen/app_icon_size"
             android:id="@+id/config_icon"
             android:layout_gravity="center_horizontal"
-            android:src="@drawable/ic_launcher"/>
+            android:src="@mipmap/ic_launcher"/>
 
         <TextView
             android:layout_width="match_parent"

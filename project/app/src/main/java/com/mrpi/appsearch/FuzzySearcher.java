@@ -11,9 +11,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 /**
- * Perform a fuzzy match on the app cache in the background and populate the
- * results list. The search may be cancelled if the user refines the query
- * before the results are ready.
+ * Perform a fuzzy match on the app cache and populate the
+ * results list.
  *
  * A fuzzy match means that all app names on the device are found where all
  * letters of the query are present in the presented order, but not necessarily
@@ -23,22 +22,19 @@ import android.util.Log;
  * presented first. The more characters between the query characters, the lower
  * on the list the app will be.
  */
-public class SearchFuzzyTextThread extends SearchThread {
+public class FuzzySearcher {
 
-    public SearchFuzzyTextThread(Context context, SearchThreadListener listener) {
-        super(context, listener);
+    private Context m_context;
+
+    public FuzzySearcher(Context context) {
+        m_context = context;
     }
 
     /**
      * Perform everything that needs to be done in the background: performing the
      * search and sorting the results.
-     *
-     * @param query_param an array of query string, of which only the first one
-     *                    is used.
      */
-    @Override
-    protected ArrayList<AppData> doInBackground(Object... query_param) {
-        final String query = ((String) query_param[0]).toLowerCase();
+    public ArrayList<AppData> search(String query) {
 
         // Query the database for all app names that have the characters in our query in the proper
         // order, although not necessary adjacent to each other.
@@ -51,7 +47,7 @@ public class SearchFuzzyTextThread extends SearchThread {
         // Put the results in a list of AppData.
         final ArrayList<AppData> app_list = new ArrayList<AppData>();
         boolean result = cursor.moveToFirst();
-        while (result && !isCancelled()) {
+        while (result) {
             AppData app_data = new AppData(cursor.getString(0), cursor.getString(1));
             app_data = getMatchRating(app_data, query);
             app_list.add(app_data);
@@ -62,13 +58,11 @@ public class SearchFuzzyTextThread extends SearchThread {
         // Sort by comparing the ratings. If ratings are equal, the order is preserved by sort().
         // This is needed, because the apps are pre-sorted on popularity. When two apps have an
         // equal text match, the most popular one comes out on top.
-        if (!isCancelled()) {
-            Collections.sort(app_list, new Comparator<Object>() {
-                public int compare(Object obj1, Object obj2) {
-                    return ((AppData) obj1).match_rating - ((AppData) obj2).match_rating;
-                }
-            });
-        }
+        Collections.sort(app_list, new Comparator<Object>() {
+            public int compare(Object obj1, Object obj2) {
+                return ((AppData) obj1).match_rating - ((AppData) obj2).match_rating;
+            }
+        });
 
         return app_list;
     }

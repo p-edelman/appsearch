@@ -39,22 +39,10 @@ public class AppIndexService
     protected void onHandleIntent(Intent intent) {
         Log.d("AppSearch", "Updating app index");
 
-        // Get the apps with known scores and wait for this process to finish.
-        // We used the SearchMostUsedThread here synchronously, which seems to be
-        // kind of defeating its purpose. But we're a background thread ourselves
-        // and can only stay that way if we handle things from this method (so no
-        // callback methods from the SearchThread allowed). So we use the class for
-        // what it does best, but in a bit different way.
+        // Get the apps with known scores.
         ArrayList<AppData> popular_apps = null;
-        SearchMostUsedThread search_thread = new SearchMostUsedThread(this, null);
-        search_thread.execute();
-        try {
-            popular_apps = search_thread.get();
-        } catch (Exception e) {
-            // For some reason, the search thread was interrupted before it could
-            // finish. In this case, we will just fill the database with live data.
-            Log.d("AppSearch", "Couldn't get a list of popular apps");
-        }
+        MostUsedSearcher searcher = new MostUsedSearcher(this, -1);
+        popular_apps = searcher.search();
 
         // Get the installed apps
         ArrayList<AppData> installed_apps = queryApps();

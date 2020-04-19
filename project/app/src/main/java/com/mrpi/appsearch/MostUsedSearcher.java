@@ -13,36 +13,43 @@ import java.util.ArrayList;
 import java.util.Calendar;
 
 /**
- * Class for finding the most used apps in a background thread.
+ * Class for finding the most used apps for the current moment.
  * This thread gets the results from the cached database, but filters out any
  * apps that are not present any more on the system; they are not included in
  * the result.
  */
-public class SearchMostUsedThread extends SearchThread {
+public class MostUsedSearcher {
 
+    private Context        m_context;
     private PackageManager m_package_manager;
+    private int            m_max_results;
 
-    public SearchMostUsedThread(Context context, SearchThreadListener listener) {
-        super(context, listener);
+    /**
+     * Simple constructor.
+     *
+     * @param context Android Context this app operates in.
+     */
+    public MostUsedSearcher(Context context) {
+        this(context, -1);
+    }
+
+    /**
+     * Simple constructor.
+     *
+     * @param context Android Context this app operates in.
+     * @param max_results the maximum number of results returned from a search. By default, all apps
+     *                    are returned.
+     */
+    public MostUsedSearcher(Context context, int max_results) {
+        m_context         = context;
         m_package_manager = context.getPackageManager();
+        m_max_results     = max_results;
     }
 
     /**
      * Query the database to find the most used apps.
-     *
-     * @param params the number of results required as integer. If this is not
-     *               given, all apps are returned.
-     *               Note that the result is not guaranteed to be a long as
-     *               given, as there might not be enough apps in the database.
      */
-    @Override
-    protected ArrayList<AppData> doInBackground(Object... params) {
-        int num_results = 0;
-        try {
-            num_results = (Integer) params[0];
-        } catch (ArrayIndexOutOfBoundsException ae) {
-        } // Number of results is unlimited
-
+    public ArrayList<AppData> search() {
         // Our return object
         ArrayList<AppData> apps = new ArrayList<AppData>();
 
@@ -61,7 +68,7 @@ public class SearchMostUsedThread extends SearchThread {
             // we need to set the limit to double the requested number.
             String time_slot_str = Long.toString(CountAndDecay.getTimeSlot());
             String day_str = Integer.toString(Calendar.getInstance().get(Calendar.DAY_OF_WEEK));
-            String limit_str = (num_results > 0) ? Integer.toString(2 * num_results) : "";
+            String limit_str = (m_max_results > 0) ? Integer.toString(2 * m_max_results) : "";
             Cursor cursor = db.query(DBHelper.TBL_USAGE,
                     new String[]{"package_name", "score"},
                     "(time_slot=? AND day=?) OR (time_slot=-1 AND day=-1)",
@@ -69,11 +76,9 @@ public class SearchMostUsedThread extends SearchThread {
                     null, null,
                     "score DESC", limit_str);
 
-            // Process the results, but stop if we have enough data or if this thread
-            // is cancelled.
+            // Process the results, but stop if we have enough data
             boolean result = cursor.moveToFirst();
-            while (result && !isCancelled() &&
-                    (apps.size() < num_results || num_results == 0)) {
+            while (result && (apps.size() < m_max_results || m_max_results == -1)) {
                 String package_name = cursor.getString(0);
                 Intent intent = m_context.getPackageManager().getLaunchIntentForPackage(package_name);
                 if (intent != null) { // Intent will be null if package has been uninstalled, so we filter out these apps here
@@ -93,9 +98,6 @@ public class SearchMostUsedThread extends SearchThread {
             cursor.close();
         }
 
-        if (!isCancelled()) {
-            return apps;
-        }
-        return null;
+        return apps;
     }
 }

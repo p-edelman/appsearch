@@ -13,7 +13,6 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 
 import android.graphics.Canvas;
 import android.graphics.Typeface;
@@ -26,6 +25,9 @@ import android.widget.RemoteViews;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * The accompanying widget for the search app. It displays the icons for the
@@ -33,14 +35,9 @@ import java.util.Calendar;
  * search.
  * Most widget events are broadcasted as intents. This class catches these
  * intents and handles them by itself.
- * This class also implements the SearchThreadListener interface, which
- * provides a mechanism for search AsyncTasks to communicate back their
- * results. An update is performed by calling a SearchMostUsedThread and letting
- * the onSearchThreadFinished() method update the widget display.
  */
 public class SmartIcon
-        extends AppWidgetProvider
-        implements SearchThreadListener {
+        extends AppWidgetProvider {
 
     /** Intent actions defined within this class. Because of the widget architecture in Android,
      *  interacting with the widget is done via intents. We capture and handle them directly within
@@ -84,7 +81,7 @@ public class SmartIcon
 
     /**
      * Set the updating of the widget display in motion.
-     * This method launches a SearchMostUsedThread to find the top apps. When it's
+     * This method launches a MostUsedSearch asynchronously to find the top apps. When it's
      * done, the onSearchThreadFinished() method is called to handle the result.
      *
      * @param context the application context for this widget
@@ -92,19 +89,22 @@ public class SmartIcon
     private void updateWidgetStart(Context context) {
         Log.d("Widget", "Updating app widget");
 
-        SearchMostUsedThread search_thread = new SearchMostUsedThread(context, this);
         ComponentName component = new ComponentName(context, SmartIcon.class);
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        search_thread.execute(manager.getAppWidgetIds(component).length);
+
+        ExecutorService executor_service = Executors.newSingleThreadExecutor();
+        Future<?> search_future = executor_service.submit(() -> {
+            MostUsedSearcher searcher = new MostUsedSearcher(context, manager.getAppWidgetIds(component).length);
+            onSearchThreadFinished(searcher.search(), context);
+        });
     }
 
     /**
      * Set the icons in (all) the active widget(s) to the list that was found by
-     * the SearchMostUsedThread.
+     * the MostUsedSearcher.
      *
      * @param apps    a list of apps, sorted in order of relevance descending
-     * @param context the application context. This is needed for the
-     *                SearchMostUsedThread.
+     * @param context the application context.
      */
     public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
         PackageManager package_manager = context.getPackageManager();

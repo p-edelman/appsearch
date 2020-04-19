@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import android.app.Activity;
 import android.app.FragmentManager;
@@ -39,45 +42,47 @@ import android.widget.Toast;
  * The main Activity for the app.
  *
  * To make the app speedy and snappy, parallelization is employed in two ways.
- * The first is for indexing the installed apps. This is delegated to a
- * {@link AppIndexService} running in the background. The trade-off is
- * accuracy: while the background service is running (which may take up to tens
- * of seconds), the search is performed on a cached index.
+ * The first is for indexing the installed apps. This is delegated to a {@link AppIndexService}
+ * running in the background. The trade-off is accuracy: while the background service is running
+ * (which may take up to tens of seconds), the search is performed on a cached index.
  *
- * Also searching and subsequently formatting the results is done in a parallel
- * process through {@link SearchFuzzyTextThread}. This prevents the keyboard from
- * blocking when a search is performed. Although this is quite fast in general,
- * it can sometimes hang when starting up. When more characters are typed while
- * the current search isn't finished, it is aborted, further speeding up the
- * search.
+ * Also searching and subsequently formatting the results is done in a background threads. This
+ * prevents the UI from blocking when a search is performed. Although searching is quite fast in
+ * general, it can sometimes hang when starting up. When more characters are typed, the running
+ * search is aborted, further speeding up the search.
  */
 public class MainActivity
-        extends Activity
-        implements SearchThreadListener {
+        extends Activity {
 
     /** The maximum number of most used apps to show when opening the activity. */
     private static final int MAX_TOP_APPS = 4;
 
-    private InputBox m_input_box;             // The GUI EditText where the user types the query
-    private ListView m_results_view;          // The GUI ListView to present the results of the
-                                              // search
-    private SearchThread m_search_thread;     // The background thread to perform the search. It
-                                              // is needed to keep this instance so it can be
-                                              // cancelled when a new query arrives.
-    private ArrayList<AppData> m_apps;        // The list of matched apps.
-    private ProgressDialog m_launch_progress; // When the user launches an app, a waiting spinner
-                                              // is presented to let her know something is
-                                              // happening.
-    private AboutDialog m_about_dialog;       // The "about" dialog.
+    private InputBox m_input_box;              // The GUI EditText where the user types the query
+    private ListView m_results_view;           // The GUI ListView to present the results of the
+                                               // search
+    private ExecutorService m_executor_service // Thread pool for our asynchronous search operations
+        = Executors.newFixedThreadPool(10);
+    private Future<?> m_search_future;         // The background thread to perform the search. It
+                                               // is needed to keep this instance so it can be
+                                               // cancelled when a new query arrives.
+    private ArrayList<AppData> m_apps;         // The list of matched apps.
+    private ProgressDialog m_launch_progress;  // When the user launches an app, a waiting spinner
+                                               // is presented to let her know something is
+                                               // happening.
+    private AboutDialog m_about_dialog;        // The "about" dialog.
 
     private CountAndDecay m_count_decay = null;
 
-    /** Commands that can be typed into the search box for additional functionality */
+    /**
+     * Commands that can be typed into the search box for additional functionality
+     */
     private final static String COMMAND_SEND_DATA = "send database";
     private final static String COMMAND_COLLECT_RAW = "collect raw data";
     private final static String COMMAND_DONT_COLLECT_RAW = "don't collect raw data";
 
-    /** Keys for individual preferences */
+    /**
+     * Keys for individual preferences
+     */
     private final static String PREFS_COLLECT_RAW = "collect_raw_data";
 
     @Override
@@ -192,8 +197,11 @@ public class MainActivity
         if (starting_action != null &&
                 (starting_action.equals(Intent.ACTION_MAIN) ||
                         starting_action.equals(Intent.ACTION_ASSIST))) {
-            m_search_thread = new SearchMostUsedThread(this, this);
-            m_search_thread.execute(MAX_TOP_APPS);
+            if (m_search_future != null) m_search_future.cancel(true);
+            m_search_future = m_executor_service.submit(() -> {
+                MostUsedSearcher searcher = new MostUsedSearcher(this, MAX_TOP_APPS);
+                onSearchThreadFinished(searcher.search());
+            });
         }
 
         // Make sure the user can start typing right away
@@ -234,8 +242,8 @@ public class MainActivity
     }
 
     /**
-     * Start a {link SearchFuzzyTextThread} to perform a fuzzy match on the given query.
-     * If a search was still running, it is cancelled.
+     * Perform a fuzzy match on the given query asynchronously.
+     * If a search was still running, it is cancelled first.
      *
      * @param query the list of characters to search for in an app name.
      */
@@ -243,11 +251,11 @@ public class MainActivity
         if (query.length() > 0) {
             m_input_box.renderClear(false);
 
-            if (m_search_thread != null) {
-                m_search_thread.cancel(true);
-            }
-            m_search_thread = new SearchFuzzyTextThread(this, this);
-            m_search_thread.execute(query);
+            if (m_search_future != null) m_search_future.cancel(true);
+            m_search_future = m_executor_service.submit(() -> {
+                FuzzySearcher searcher = new FuzzySearcher(this);
+                onSearchThreadFinished(searcher.search(query));
+            });
         } else {
             // If the user clears the view, we don't clean up the list of results but we remove the
             // highlighting of the matched letters.
@@ -339,7 +347,7 @@ public class MainActivity
         setIntent(new_intent);
     }
 
-    public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
+    public void onSearchThreadFinished(ArrayList<AppData> apps) {
         m_apps = apps;
 
         // Set the first result to the "selected" app

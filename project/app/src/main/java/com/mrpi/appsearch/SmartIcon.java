@@ -25,9 +25,6 @@ import android.widget.RemoteViews;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 /**
  * The accompanying widget for the search app. It displays the icons for the
@@ -74,61 +71,31 @@ public class SmartIcon
     public void onUpdate(Context context,
                          AppWidgetManager widget_manager,
                          int[] widget_ids) {
-        updateWidgetStart(context);
+        updateWidgets(context);
         context.startService(new Intent(context, SmartIconRotationService.class));
         super.onUpdate(context, widget_manager, widget_ids);
     }
 
     /**
-     * Set the updating of the widget display in motion.
-     * This method launches a MostUsedSearch asynchronously to find the top apps. When it's
-     * done, the onSearchThreadFinished() method is called to handle the result.
+     * Render all widgets  to represent the top apps for this moment. The topmost app is rendered
+     * to the first widget, the second to the second widget, and so on.
      *
      * @param context the application context for this widget
      */
-    private void updateWidgetStart(Context context) {
-        Log.d("Widget", "Updating app widget");
-
-        ComponentName component = new ComponentName(context, SmartIcon.class);
-        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-
-        ExecutorService executor_service = Executors.newSingleThreadExecutor();
-        Future<?> search_future = executor_service.submit(() -> {
-            MostUsedSearcher searcher = new MostUsedSearcher(context, manager.getAppWidgetIds(component).length);
-            onSearchThreadFinished(searcher.search(), context);
-        });
-    }
-
-    /**
-     * Set the icons in (all) the active widget(s) to the list that was found by
-     * the MostUsedSearcher.
-     *
-     * @param apps    a list of apps, sorted in order of relevance descending
-     * @param context the application context.
-     */
-    public void onSearchThreadFinished(ArrayList<AppData> apps, Context context) {
-        PackageManager package_manager = context.getPackageManager();
-        Resources resources = context.getResources();
+    private void updateWidgets(Context context) {
         SharedPreferences preferences = context.getSharedPreferences(SMART_ICON_PREFERENCES,
                 Context.MODE_MULTI_PROCESS);
 
-        // Instantiate the RemoteViews object for the app widget layout.
+        // The views representing the widgets
         RemoteViews views = new RemoteViews(context.getPackageName(),
                 R.layout.smart_icon);
 
-        // Set background
-        if (preferences.getBoolean(HAS_BACKGROUND, true)) {
-            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.smart_icon_background);
-        } else {
-            views.setInt(R.id.widget_container, "setBackgroundResource", 0);
-        }
-
-        // Get the orientation dependent parameters
-        int icon_padding;
+        // Set background, text and icon size, and paddings
+        float text_size = context.getResources().getDimension(R.dimen.smart_icon_text_size_default);
+        int icon_size =  context.getResources().getDimensionPixelSize(android.R.dimen.app_icon_size);
         int text_padding;
-        float text_size = resources.getDimension(R.dimen.smart_icon_text_size_default);
-        int icon_size = resources.getDimensionPixelSize(android.R.dimen.app_icon_size);
-        if (resources.getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+        int icon_padding;
+        if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
             icon_padding = preferences.getInt(SmartIcon.ICON_PADDING_P, 0);
             text_padding = preferences.getInt(SmartIcon.TEXT_PADDING_P, 0);
             text_size = preferences.getFloat(SmartIcon.TEXT_SIZE_P, text_size);
@@ -139,20 +106,27 @@ public class SmartIcon
             text_size = preferences.getFloat(SmartIcon.TEXT_SIZE_L, text_size);
             icon_size = preferences.getInt(SmartIcon.ICON_SIZE_L, icon_size);
         }
-
-        // Set app independent parameters
+        if (preferences.getBoolean(HAS_BACKGROUND, true)) {
+            views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.smart_icon_background);
+        } else {
+            views.setInt(R.id.widget_container, "setBackgroundResource", 0);
+        }
         views.setViewPadding(R.id.widget_icon, 0, icon_padding, 0, 0);
         views.setViewPadding(R.id.widget_text, 0, text_padding, 0, 0);
         views.setFloat(R.id.widget_text, "setTextSize", text_size);
 
-        // To loop over all the installed widgets, we need to get all the widget ids
-        ComponentName component = new ComponentName(context, SmartIcon.class);
-        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        int[] widget_ids = manager.getAppWidgetIds(component);
+        // Get all the widget ids
+        int[] widget_ids = AppWidgetManager.getInstance(context).getAppWidgetIds(new ComponentName(context, SmartIcon.class));
+
+        // Search for the top apps for the number of widgets there are
+        MostUsedSearcher searcher = new MostUsedSearcher(context, widget_ids.length);
+        ArrayList<AppData> apps = searcher.search();
 
         // Fill the widgets with the top apps
+        PackageManager package_manager = context.getPackageManager();
         int app_num = 0;
         for (int widget_num = 0; widget_num < widget_ids.length; widget_num++) {
+
             // Try to find a matching app
             ApplicationInfo app_info = null;
             Resources app_resources = null;
@@ -221,7 +195,7 @@ public class SmartIcon
                 views.setOnClickPendingIntent(R.id.widget_text, null);
             }
 
-            manager.updateAppWidget(widget_ids[widget_num], views);
+            AppWidgetManager.getInstance(context).updateAppWidget(widget_ids[widget_num], views);
             app_num++;
         }
     }
@@ -300,7 +274,7 @@ public class SmartIcon
     public void onReceive(Context context, Intent intent) {
         if (intent.getAction().equals(ACTION_WIDGET_UPDATE)) {
             Log.d("Widget", "Received a signal to update");
-            updateWidgetStart(context);
+            updateWidgets(context);
         } else if (intent.getAction().equals(ACTION_WIDGET_ICON_CLICK)) {
             // One of the app icons was clicked
             final String name = intent.getStringExtra("name");

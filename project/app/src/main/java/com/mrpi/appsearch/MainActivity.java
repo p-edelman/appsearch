@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -24,6 +25,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -61,7 +64,7 @@ public class MainActivity
     private ListView m_results_view;           // The GUI ListView to present the results of the
                                                // search
     private ExecutorService m_executor_service // Thread pool for our asynchronous search operations
-        = Executors.newFixedThreadPool(10);
+        = Executors.newCachedThreadPool();
     private Future<?> m_search_future;         // The background thread to perform the search. It
                                                // is needed to keep this instance so it can be
                                                // cancelled when a new query arrives.
@@ -101,7 +104,7 @@ public class MainActivity
         m_input_box.addTextChangedListener(new TextWatcher() {
             @Override
             public void onTextChanged(CharSequence char_sequence, int start, int before, int count) {
-                doSearch(char_sequence.toString());
+                doFuzzySearch(char_sequence.toString());
             }
 
             @Override
@@ -197,10 +200,9 @@ public class MainActivity
         if (starting_action != null &&
                 (starting_action.equals(Intent.ACTION_MAIN) ||
                         starting_action.equals(Intent.ACTION_ASSIST))) {
-            if (m_search_future != null) m_search_future.cancel(true);
-            m_search_future = m_executor_service.submit(() -> {
+            doBackgroundSearch(() -> {
                 MostUsedSearcher searcher = new MostUsedSearcher(this, MAX_TOP_APPS);
-                onSearchThreadFinished(searcher.search());
+                return searcher.search();
             });
         }
 
@@ -247,14 +249,13 @@ public class MainActivity
      *
      * @param query the list of characters to search for in an app name.
      */
-    private void doSearch(final String query) {
+    private void doFuzzySearch(final String query) {
         if (query.length() > 0) {
             m_input_box.renderClear(false);
 
-            if (m_search_future != null) m_search_future.cancel(true);
-            m_search_future = m_executor_service.submit(() -> {
+            doBackgroundSearch(() -> {
                 FuzzySearcher searcher = new FuzzySearcher(this);
-                onSearchThreadFinished(searcher.search(query));
+                return searcher.search(query);
             });
         } else {
             // If the user clears the view, we don't clean up the list of results but we remove the
@@ -347,7 +348,33 @@ public class MainActivity
         setIntent(new_intent);
     }
 
-    public void onSearchThreadFinished(ArrayList<AppData> apps) {
+    /** Perform a search for AppData in a background thread (using m_search_future). When finished,
+     *  call onBackgroundSearchFinished on the UI thread to process the results. If a search is
+     *  currently running, it will be cancelled first.
+     *
+     * @param callable a Callable that should return an ArrayList of AppData objects.
+     */
+    private void doBackgroundSearch(Callable<ArrayList<AppData>> callable) {
+        if (m_search_future != null) m_search_future.cancel(true);
+        m_search_future = m_executor_service.submit(() -> {
+            try {
+                ArrayList<AppData> apps = callable.call();
+                Handler main = new Handler(Looper.getMainLooper());
+                main.post(() -> onBackgroundSearchFinished(apps));
+            } catch (Exception e) {
+                // TODO: report exception
+            }
+        });
+    }
+
+    /**
+     * Callback for doBackgroundSearch to handle the results of an AppData search on the UI thread.
+     * It will set the search box to the first result and the listview to the remainder of the
+     * results.
+     *
+     * @param apps the result from the Callable being passed to doBackgroundSearch()
+     */
+    public void onBackgroundSearchFinished(ArrayList<AppData> apps) {
         m_apps = apps;
 
         // Set the first result to the "selected" app
@@ -374,7 +401,6 @@ public class MainActivity
         }
         ListView results_list_view = (ListView) findViewById(R.id.resultsListView);
         results_list_view.setAdapter(adapter);
-
     }
 
     private void sendUsageData() {

@@ -274,17 +274,15 @@ public class MainActivity
     private void doFuzzySearch(final String query) {
         if (query.length() > 0) {
             m_input_box.renderClear(false);
-            if (query.startsWith("/")) {
-                doBackgroundSearch(() -> {
-                    FuzzyCommandSearcher searcher = new FuzzyCommandSearcher(this);
-                    return searcher.search(query);
-                });
-            } else {
-                doBackgroundSearch(() -> {
-                    FuzzyAppsSearcher searcher = new FuzzyAppsSearcher(this);
-                    return searcher.search(query);
-                });
-            }
+            doBackgroundSearch(() -> {
+                FuzzyAppsSearcher app_searcher = new FuzzyAppsSearcher(this);
+                ArrayList results = app_searcher.search(query);
+                if (query.startsWith("/")) { // Magic character to _also_ search for commands
+                    FuzzyCommandSearcher command_searcher = new FuzzyCommandSearcher(this);
+                    results.addAll(command_searcher.search(query));
+                }
+                return results;
+            });
         } else {
             // If the user clears the view, we don't clean up the list of results but we remove the
             // highlighting of the matched letters.

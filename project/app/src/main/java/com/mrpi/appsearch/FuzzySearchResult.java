@@ -1,5 +1,8 @@
 package com.mrpi.appsearch;
 
+import android.content.Context;
+import android.graphics.drawable.Drawable;
+
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -20,6 +23,14 @@ public abstract class FuzzySearchResult {
     public FuzzySearchResult(String name) {
         this.name = name;
     }
+
+    /**
+     * Derived classes should implement this to render the icon for this search result.
+     *
+     * @param context the application context
+     * @return a Drawable representing the icon for this search result
+     */
+    abstract Drawable resolveIcon(Context context);
 
     /**
      * Calculate the "amount of match" between query and string. The lower the

@@ -28,16 +28,12 @@ public class SearchResultArrayAdapter<T extends FuzzySearchResult>
     // The list of search results we need to format.
     private List<T> m_search_result;
 
-    // The central package manager
-    private PackageManager m_package_manager;
-
     // Flag to indicate whether the matched characters should be highlighted.
     private boolean m_render_clear;
 
     public SearchResultArrayAdapter(Context context, int textview_resource_id, List<T> search_result) {
         super(context, textview_resource_id, search_result);
         m_search_result   = search_result;
-        m_package_manager = context.getPackageManager();
         m_render_clear    = false;
     }
 
@@ -95,18 +91,11 @@ public class SearchResultArrayAdapter<T extends FuzzySearchResult>
 
         // Set icon
         ImageView image_view = (ImageView) row_view.findViewById(R.id.AppIcon);
-        Drawable icon;
-        if (search_result instanceof FuzzyCommandSearchResult) {
-            icon = getContext().getResources().getDrawable(android.R.drawable.ic_menu_manage);
-            image_view.setImageDrawable(icon);
-        } else if (search_result instanceof FuzzyAppSearchResult) {
-            try {
-                icon = m_package_manager.getApplicationIcon(((FuzzyAppSearchResult)search_result).package_name);
-                image_view.setImageDrawable(icon);
-            } catch (NameNotFoundException e) {
-                return null;
-            }
+        Drawable icon = search_result.resolveIcon(getContext());
+        if (icon == null) {
+            return null;
         }
+        image_view.setImageDrawable(icon);
 
         // Set text; make the matching letters underlined and bold
         TextView text_view = (TextView) row_view.findViewById(R.id.AppName);

@@ -1,7 +1,9 @@
 package com.mrpi.appsearch;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.drawable.Drawable;
 
 import java.util.EnumMap;
 
@@ -24,6 +26,16 @@ public class FuzzyCommandSearchResult extends FuzzySearchResult {
     public FuzzyCommandSearchResult(String name, CommandCode command) {
         super(name);
         this.command = command;
+    }
+
+    /**
+     * A command icon is always the built-in "settings" icon (ic_menu_manage).
+     *
+     * @param context the application context
+     * @return a Drawable fro ic_menu_manage.
+     */
+    public Drawable resolveIcon(Context context) {
+        return context.getResources().getDrawable(android.R.drawable.ic_menu_manage);
     }
 
     /**

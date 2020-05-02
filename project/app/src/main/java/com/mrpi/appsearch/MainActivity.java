@@ -405,23 +405,18 @@ public class MainActivity
         m_search_results = apps;
 
         // Use the first result as the "selected" app
-        ImageView selected_icon = (ImageView) findViewById(R.id.selectedAppIcon);
+        Drawable icon = null;
         if (apps.size() > 0) {
             m_input_box.setMatchingSearchResult(apps.get(0));
-            if (apps.get(0) instanceof FuzzyAppSearchResult) {
-                try {
-                    Drawable icon = getPackageManager().getApplicationIcon(((FuzzyAppSearchResult)apps.get(0)).package_name);
-                    selected_icon.setImageDrawable(icon);
-                } catch (PackageManager.NameNotFoundException e) {
-                    selected_icon.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_delete));
-                }
-            } else if (apps.get(0) instanceof FuzzyCommandSearchResult) {
-                selected_icon.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_menu_manage));
-            }
+            icon = apps.get(0).resolveIcon(this); // might be null
         } else {
             m_input_box.setMatchingSearchResult(null);
-            selected_icon.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_delete));
         }
+        if (icon == null) {
+            // Show an "error" icon if no actual icon could be found.
+            icon = getResources().getDrawable(android.R.drawable.ic_delete);
+        }
+        ((ImageView) findViewById(R.id.selectedAppIcon)).setImageDrawable(icon);
 
         // Fill the list view with the rest of the results
         SearchResultArrayAdapter adapter;

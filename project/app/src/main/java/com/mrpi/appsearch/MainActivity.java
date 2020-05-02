@@ -60,28 +60,30 @@ public class MainActivity
     /** The maximum number of most used apps to show when opening the activity. */
     private static final int MAX_TOP_APPS = 4;
 
-    private InputBox m_input_box;              // The GUI EditText where the user types the query
-    private ListView m_results_view;           // The GUI ListView to present the results of the
-                                               // search
-    private ExecutorService m_executor_service // Thread pool for our asynchronous search operations
-        = Executors.newCachedThreadPool();
-    private Future<?> m_search_future;         // The background thread to perform the search. It
-                                               // is needed to keep this instance so it can be
-                                               // cancelled when a new query arrives.
-    private ArrayList<AppData> m_apps;         // The list of matched apps.
-    private ProgressDialog m_launch_progress;  // When the user launches an app, a waiting spinner
-                                               // is presented to let her know something is
-                                               // happening.
-    private AboutDialog m_about_dialog;        // The "about" dialog.
+    // The GUI EditText where the user types the query
+    private InputBox m_input_box;
+
+    // The GUI ListView to present the results of the search
+    private ListView m_results_view;
+
+    // Thread pool for our asynchronous search operations
+    private ExecutorService m_executor_service = Executors.newCachedThreadPool();
+
+    // The background thread to perform the search. It is needed to keep this instance so it can be
+    // cancelled when a new query arrives.
+    private Future<?> m_search_future;
+
+    // The list of matched apps or commands
+    private ArrayList<? extends FuzzySearchResult> m_search_results;
+
+    // When the user launches an app, a waiting spinner is presented to let her know something is
+    // happening.
+    private ProgressDialog m_launch_progress;
+
+    // The "about" dialog.
+    private AboutDialog m_about_dialog;
 
     private CountAndDecay m_count_decay = null;
-
-    /**
-     * Commands that can be typed into the search box for additional functionality
-     */
-    private final static String COMMAND_SEND_DATA = "send database";
-    private final static String COMMAND_COLLECT_RAW = "collect raw data";
-    private final static String COMMAND_DONT_COLLECT_RAW = "don't collect raw data";
 
     /**
      * Keys for individual preferences
@@ -116,21 +118,25 @@ public class MainActivity
             }
         });
 
-        // Add listener for the action button
+        // Add listener for the action keyboard button
         m_input_box.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
-                String query = textView.getText().toString();
-                actionCallback(query);
+                if (m_search_results.size() > 0) {
+                    launch(m_search_results.get(0));
+                }
+
                 return true;
             }
         });
 
+        // Add a similar listener for the "go" button
         Button launch_button = (Button) findViewById(R.id.launchButton);
         launch_button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                String query = m_input_box.getText().toString();
-                actionCallback(query);
+                if (m_search_results.size() > 0) {
+                    launch(m_search_results.get(0));
+                }
             }
         });
 
@@ -139,10 +145,22 @@ public class MainActivity
         final AdapterView.OnItemClickListener click_listener = new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                launchApp((AppData) parent.getItemAtPosition(position));
+                try {
+                    launch((FuzzySearchResult) parent.getItemAtPosition(position));
+                } catch (ClassCastException e) {}
             }
         };
-        m_results_view.setOnItemClickListener(click_listener);
+        m_results_view.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                try {
+                    launch((FuzzySearchResult) parent.getItemAtPosition(position));
+                } catch (ClassCastException e) {
+                    // Silently ignore this, since results are guaranteed to be derived from
+                    // FuzzySearchResult.
+                }
+            }
+        });
 
         // Instantiate the waiting dialog
         m_launch_progress = new ProgressDialog(this);
@@ -151,34 +169,38 @@ public class MainActivity
     }
 
     /**
-     * Callback for when the "action" of the app is activated, using the keyboard or the action
-     * button.
+     * Perform the action with the result that the user selected from the GUI. This is normally
+     * an app that should be opened (captured using FuzzyAppSearchResult), but may be a command
+     * as well (a FuzzyCommandSearchResult), in which case the proper action is dispatched.
      *
-     * @param query the query string from the input box to act on.
+     * @param search_result the FuzzySearchResult that the user selected.
      */
-    private void actionCallback(String query) {
-        if (query.equals(COMMAND_SEND_DATA)) {
-            sendUsageData();
-        } else if (query.equals(COMMAND_COLLECT_RAW) || query.equals(COMMAND_DONT_COLLECT_RAW)) {
-            boolean collect_raw = query.equals(COMMAND_COLLECT_RAW);
-            SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
-            editor.putBoolean(PREFS_COLLECT_RAW, collect_raw);
-            if (m_count_decay != null) {
-                m_count_decay.setRawDataCollection(collect_raw);
-            }
-            editor.apply();
+    private void launch(FuzzySearchResult search_result) {
+        if (search_result instanceof FuzzyAppSearchResult) {
+            launchApp((FuzzyAppSearchResult)search_result);
+        } else if (search_result instanceof FuzzyCommandSearchResult) {
+            switch (((FuzzyCommandSearchResult) search_result).command) {
+                case EXPORT_DB:
+                    sendUsageData();
+                    break;
+                case COLLECT_RAW:
+                case DONT_COLLECT_RAW:
+                    boolean collect_raw = (((FuzzyCommandSearchResult) search_result).command) == FuzzyCommandSearchResult.CommandCode.COLLECT_RAW;
+                    SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
+                    editor.putBoolean(PREFS_COLLECT_RAW, collect_raw);
+                    if (m_count_decay != null) {
+                        m_count_decay.setRawDataCollection(collect_raw);
+                    }
+                    editor.apply();
 
-            String msg;
-            if (collect_raw) {
-                msg = "All app openings will be saved from now on";
-            } else {
-                msg = "App openings won't be saved anymore";
-            }
-            Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
-        } else {
-            // If there are results, launch the top one
-            if (m_apps.size() > 0) {
-                launchApp(m_apps.get(0));
+                    String msg;
+                    if (collect_raw) {
+                        msg = "All app openings will be saved from now on";
+                    } else {
+                        msg = "App openings won't be saved anymore";
+                    }
+                    Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                    break;
             }
         }
     }
@@ -201,7 +223,7 @@ public class MainActivity
                 (starting_action.equals(Intent.ACTION_MAIN) ||
                         starting_action.equals(Intent.ACTION_ASSIST))) {
             doBackgroundSearch(() -> {
-                MostUsedSearcher searcher = new MostUsedSearcher(this, MAX_TOP_APPS);
+                MostUsedAppsSearcher searcher = new MostUsedAppsSearcher(this, MAX_TOP_APPS);
                 return searcher.search();
             });
         }
@@ -227,7 +249,7 @@ public class MainActivity
     private void reset() {
         Log.d("Reset", "Resetting");
         // Clear results
-        AppArrayAdapter adapter = ((AppArrayAdapter) m_results_view.getAdapter());
+        SearchResultArrayAdapter adapter = ((SearchResultArrayAdapter) m_results_view.getAdapter());
         if (adapter != null) {
             adapter.clear();
             adapter.notifyDataSetChanged();
@@ -252,15 +274,21 @@ public class MainActivity
     private void doFuzzySearch(final String query) {
         if (query.length() > 0) {
             m_input_box.renderClear(false);
-
-            doBackgroundSearch(() -> {
-                FuzzySearcher searcher = new FuzzySearcher(this);
-                return searcher.search(query);
-            });
+            if (query.startsWith("/")) {
+                doBackgroundSearch(() -> {
+                    FuzzyCommandSearcher searcher = new FuzzyCommandSearcher(this);
+                    return searcher.search(query);
+                });
+            } else {
+                doBackgroundSearch(() -> {
+                    FuzzyAppsSearcher searcher = new FuzzyAppsSearcher(this);
+                    return searcher.search(query);
+                });
+            }
         } else {
             // If the user clears the view, we don't clean up the list of results but we remove the
             // highlighting of the matched letters.
-            AppArrayAdapter adapter = ((AppArrayAdapter) m_results_view.getAdapter());
+            SearchResultArrayAdapter adapter = ((SearchResultArrayAdapter) m_results_view.getAdapter());
             if (adapter != null) {
                 adapter.renderClear();
             }
@@ -273,7 +301,7 @@ public class MainActivity
      * The entry point to launch an app. This takes care of all the housekeeping and makes sure this
      * app is properly closed before launching the other app.
      */
-    private void launchApp(AppData app_data) {
+    private void launchApp(FuzzyAppSearchResult app_data) {
         // Get the app name from the GUI list
         final String name = app_data.name;
         final String package_name = app_data.package_name;
@@ -354,14 +382,15 @@ public class MainActivity
      *
      * @param callable a Callable that should return an ArrayList of AppData objects.
      */
-    private void doBackgroundSearch(Callable<ArrayList<AppData>> callable) {
+    private <T extends FuzzySearchResult> void doBackgroundSearch(Callable<ArrayList<T>> callable) {
         if (m_search_future != null) m_search_future.cancel(true);
         m_search_future = m_executor_service.submit(() -> {
             try {
-                ArrayList<AppData> apps = callable.call();
+                ArrayList<T> results = callable.call();
                 Handler main = new Handler(Looper.getMainLooper());
-                main.post(() -> onBackgroundSearchFinished(apps));
+                main.post(() -> onBackgroundSearchFinished(results));
             } catch (Exception e) {
+                Log.d("AppSearch", "Exception occurred", e);
                 // TODO: report exception
             }
         });
@@ -374,30 +403,34 @@ public class MainActivity
      *
      * @param apps the result from the Callable being passed to doBackgroundSearch()
      */
-    public void onBackgroundSearchFinished(ArrayList<AppData> apps) {
-        m_apps = apps;
+    public <T extends FuzzySearchResult> void onBackgroundSearchFinished(ArrayList<T> apps) {
+        m_search_results = apps;
 
-        // Set the first result to the "selected" app
+        // Use the first result as the "selected" app
         ImageView selected_icon = (ImageView) findViewById(R.id.selectedAppIcon);
         if (apps.size() > 0) {
-            m_input_box.setMatchingApp(apps.get(0));
-            try {
-                Drawable icon = getPackageManager().getApplicationIcon(apps.get(0).package_name);
-                selected_icon.setImageDrawable(icon);
-            } catch (PackageManager.NameNotFoundException e) {
-                selected_icon.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_delete));
+            m_input_box.setMatchingSearchResult(apps.get(0));
+            if (apps.get(0) instanceof FuzzyAppSearchResult) {
+                try {
+                    Drawable icon = getPackageManager().getApplicationIcon(((FuzzyAppSearchResult)apps.get(0)).package_name);
+                    selected_icon.setImageDrawable(icon);
+                } catch (PackageManager.NameNotFoundException e) {
+                    selected_icon.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_delete));
+                }
+            } else if (apps.get(0) instanceof FuzzyCommandSearchResult) {
+                selected_icon.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_menu_manage));
             }
         } else {
-            m_input_box.setMatchingApp(null);
+            m_input_box.setMatchingSearchResult(null);
             selected_icon.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_delete));
         }
 
         // Fill the list view with the rest of the results
-        AppArrayAdapter adapter;
+        SearchResultArrayAdapter adapter;
         if (apps.size() > 0) {
-            adapter = new AppArrayAdapter(this, R.id.resultsListView, apps.subList(1, apps.size()));
+            adapter = new SearchResultArrayAdapter(this, R.id.resultsListView, apps.subList(1, apps.size()));
         } else {
-            adapter = new AppArrayAdapter(this, R.id.resultsListView, new ArrayList<AppData>());
+            adapter = new SearchResultArrayAdapter(this, R.id.resultsListView, new ArrayList<FuzzySearchResult>());
         }
         ListView results_list_view = (ListView) findViewById(R.id.resultsListView);
         results_list_view.setAdapter(adapter);

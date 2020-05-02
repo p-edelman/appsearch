@@ -18,7 +18,7 @@ import java.util.Calendar;
  * apps that are not present any more on the system; they are not included in
  * the result.
  */
-public class MostUsedSearcher {
+public class MostUsedAppsSearcher {
 
     private Context        m_context;
     private PackageManager m_package_manager;
@@ -29,7 +29,7 @@ public class MostUsedSearcher {
      *
      * @param context Android Context this app operates in.
      */
-    public MostUsedSearcher(Context context) {
+    public MostUsedAppsSearcher(Context context) {
         this(context, -1);
     }
 
@@ -40,7 +40,7 @@ public class MostUsedSearcher {
      * @param max_results the maximum number of results returned from a search. By default, all apps
      *                    are returned.
      */
-    public MostUsedSearcher(Context context, int max_results) {
+    public MostUsedAppsSearcher(Context context, int max_results) {
         m_context         = context;
         m_package_manager = context.getPackageManager();
         m_max_results     = max_results;
@@ -49,9 +49,9 @@ public class MostUsedSearcher {
     /**
      * Query the database to find the most used apps.
      */
-    public ArrayList<AppData> search() {
+    public ArrayList<FuzzyAppSearchResult> search() {
         // Our return object
-        ArrayList<AppData> apps = new ArrayList<AppData>();
+        ArrayList<FuzzyAppSearchResult> apps = new ArrayList<FuzzyAppSearchResult>();
 
         // Open the database
         SQLiteDatabase db = null;
@@ -84,7 +84,7 @@ public class MostUsedSearcher {
                 if (intent != null) { // Intent will be null if package has been uninstalled, so we filter out these apps here
                     ActivityInfo activity_info = intent.resolveActivityInfo(m_package_manager, 0);
                     String name = activity_info.loadLabel(m_package_manager).toString();
-                    AppData app_data = new AppData(name, package_name);
+                    FuzzyAppSearchResult app_data = new FuzzyAppSearchResult(name, package_name);
 
                     // If the package is already present in the list, this new entry has a
                     // lower score so we can ignore it.

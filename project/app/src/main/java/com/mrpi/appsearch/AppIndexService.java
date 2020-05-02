@@ -40,12 +40,12 @@ public class AppIndexService
         Log.d("AppSearch", "Updating app index");
 
         // Get the apps with known scores.
-        ArrayList<AppData> popular_apps = null;
-        MostUsedSearcher searcher = new MostUsedSearcher(this, -1);
+        ArrayList<FuzzyAppSearchResult> popular_apps = null;
+        MostUsedAppsSearcher searcher = new MostUsedAppsSearcher(this, -1);
         popular_apps = searcher.search();
 
         // Get the installed apps
-        ArrayList<AppData> installed_apps = queryApps();
+        ArrayList<FuzzyAppSearchResult> installed_apps = queryApps();
 
         if (popular_apps != null) {
             // Remove all entries in popular_apps from installed_apps and then append
@@ -65,10 +65,10 @@ public class AppIndexService
     /**
      * Query the system for installed apps.
      *
-     * @return a list of AppData objects of all the installed apps on the system,
-     * except for this app itself.
+     * @return a list of FuzzyAppSearchResult objects of all the installed apps on the system,
+     *         except for this app itself.
      */
-    private ArrayList<AppData> queryApps() {
+    private ArrayList<FuzzyAppSearchResult> queryApps() {
         // We need to filter out ourselves
         String own_name = getPackageName();
 
@@ -78,11 +78,11 @@ public class AppIndexService
         main_intent.addCategory(Intent.CATEGORY_LAUNCHER);
         final List<ResolveInfo> packages = pm.queryIntentActivities(main_intent, 0);
 
-        // Collect the relevant info in an AppData object
-        ArrayList<AppData> app_list = new ArrayList<AppData>();
+        // Collect the relevant info in an FuzzyAppSearchResult object
+        ArrayList<FuzzyAppSearchResult> app_list = new ArrayList<FuzzyAppSearchResult>();
         for (ResolveInfo resolve_info : packages) {
             ActivityInfo activity_info = resolve_info.activityInfo;
-            AppData app_data = new AppData(activity_info.loadLabel(pm).toString(),
+            FuzzyAppSearchResult app_data = new FuzzyAppSearchResult(activity_info.loadLabel(pm).toString(),
                     activity_info.applicationInfo.packageName);
             if (!app_data.package_name.equals(own_name)) { // Exclude self from list
                 app_list.add(app_data);
@@ -101,12 +101,12 @@ public class AppIndexService
      *
      * @param apps list of apps to write to the database.
      */
-    private void writeToDB(ArrayList<AppData> apps) {
+    private void writeToDB(ArrayList<FuzzyAppSearchResult> apps) {
         DBHelper db_helper = DBHelper.getInstance(this);
         SQLiteDatabase db = db_helper.getWritableDatabase();
 
         db.beginTransactionNonExclusive();
-        for (AppData app_data : apps) {
+        for (FuzzyAppSearchResult app_data : apps) {
             ContentValues values = new ContentValues();
             values.put("public_name", app_data.name);
             values.put("package_name", app_data.package_name);

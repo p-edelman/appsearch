@@ -119,8 +119,8 @@ public class SmartIcon
         int[] widget_ids = AppWidgetManager.getInstance(context).getAppWidgetIds(new ComponentName(context, SmartIcon.class));
 
         // Search for the top apps for the number of widgets there are
-        MostUsedSearcher searcher = new MostUsedSearcher(context, widget_ids.length);
-        ArrayList<AppData> apps = searcher.search();
+        MostUsedAppsSearcher searcher = new MostUsedAppsSearcher(context, widget_ids.length);
+        ArrayList<FuzzyAppSearchResult> apps = searcher.search();
 
         // Fill the widgets with the top apps
         PackageManager package_manager = context.getPackageManager();
@@ -130,7 +130,7 @@ public class SmartIcon
             // Try to find a matching app
             ApplicationInfo app_info = null;
             Resources app_resources = null;
-            AppData app = null;
+            FuzzyAppSearchResult app = null;
             while (app_num < apps.size() && app_info == null) {
                 app = apps.get(app_num);
                 try {

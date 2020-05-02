@@ -26,8 +26,8 @@ import android.widget.TextView;
  */
 public class InputBox extends EditText {
 
-    /** The app that currently gives the best match to the input. */
-    private AppData m_matching_app;
+    /** The search result that currently best matches to the input. */
+    private FuzzySearchResult m_matching_search;
 
     /** Whether to render the matching app without highlighting the matched letters. */
     private boolean m_render_clear = false;
@@ -60,12 +60,12 @@ public class InputBox extends EditText {
     }
 
     /**
-     * Set the best matching app for the input text.
+     * Set the best matching search result for the input text.
      *
-     * @param app_data the AppData object for the best match.
+     * @param search_data the SearchData object for the best match.
      */
-    public void setMatchingApp(AppData app_data) {
-        m_matching_app = app_data;
+    public void setMatchingSearchResult(FuzzySearchResult search_data) {
+        m_matching_search = search_data;
 
         // Render the new text view and clear the cursor position. Note: we can't calculate the
         // cursor position yet because we don't have a canvas to draw on.
@@ -118,23 +118,23 @@ public class InputBox extends EditText {
         text_view.setTypeface(getTypeface());
         text_view.setTextSize(TypedValue.COMPLEX_UNIT_PX, getTextSize());
 
-        if (m_matching_app != null) {
+        if (m_matching_search != null) {
             text_view.setTextColor(getCurrentHintTextColor());
 
             // Set the text
             if (is_capped) {
-                if (m_matching_app.char_matches != null && m_render_clear == false) {
-                    int to_pos = m_matching_app.char_matches.get(m_matching_app.char_matches.size() - 1) + 1;
-                    text_view.setText(m_matching_app.name.substring(0, to_pos), BufferType.SPANNABLE);
+                if (m_matching_search.char_matches != null && m_render_clear == false) {
+                    int to_pos = m_matching_search.char_matches.get(m_matching_search.char_matches.size() - 1) + 1;
+                    text_view.setText(m_matching_search.name.substring(0, to_pos), BufferType.SPANNABLE);
                 }
             } else {
-                text_view.setText(m_matching_app.name, BufferType.SPANNABLE);
+                text_view.setText(m_matching_search.name, BufferType.SPANNABLE);
             }
 
             // Highlight matched letters
-            if (m_matching_app.char_matches != null && m_render_clear == false) {
+            if (m_matching_search.char_matches != null && m_render_clear == false) {
                 Spannable spannable = (Spannable) text_view.getText();
-                for (Integer i : m_matching_app.char_matches) {
+                for (Integer i : m_matching_search.char_matches) {
                     spannable.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                     spannable.setSpan(new UnderlineSpan(), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                     spannable.setSpan(new ForegroundColorSpan(getCurrentTextColor()), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);

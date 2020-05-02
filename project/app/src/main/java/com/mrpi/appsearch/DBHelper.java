@@ -32,7 +32,7 @@ public class DBHelper extends SQLiteOpenHelper {
     private static DBHelper m_instance;
 
     /** Housekeeping parameters */
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
     private static final String DB_NAME = "apps.sqlite";
 
     /** The schema for the table with installed apps. */
@@ -50,7 +50,12 @@ public class DBHelper extends SQLiteOpenHelper {
     private final static String SCHEMA_RAW_DATA =
             "(package_name TEXT, date DATETIME DEFAULT (datetime('now','localtime')))";
 
-    /**cThe metadata table is a simple text key/numeric value storage. */
+    /** Commands that can be typed into the search box for additional functionality */
+    public static final String TBL_COMMANDS = "commands";
+    private final static String SCHEMA_COMMANDS =
+            "(name TEXT, command_code INTEGER PRIMARY KEY)";
+
+    /** The metadata table is a simple text key/numeric value storage. */
     private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";
 
     private DBHelper(Context context) {
@@ -75,6 +80,8 @@ public class DBHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE " + TBL_USAGE + " " + SCHEMA_USAGE);
         db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
         db.execSQL("CREATE TABLE " + TBL_RAW_DATA + " " + SCHEMA_RAW_DATA);
+        db.execSQL("CREATE TABLE " + TBL_COMMANDS + " " + SCHEMA_COMMANDS);
+        FuzzyCommandSearchResult.initializeDB(db, TBL_COMMANDS);
         db.setTransactionSuccessful();
         db.endTransaction();
         Log.d("AppSearch", "Database initialized");
@@ -83,13 +90,15 @@ public class DBHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int old_version, int new_version) {
         Log.d("AppSearch", "New version: " + new_version);
-        if ((old_version == 1) && (new_version == 2)) {
-            db.beginTransaction();
+        if ((old_version < 2) && (new_version >= 2)) {
             db.execSQL("CREATE TABLE " + TBL_USAGE + " " + SCHEMA_USAGE + ";");
             db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
-            db.setTransactionSuccessful();
-            db.endTransaction();
-            Log.d("AppSearch", "Database upgraded to version 2");
+            Log.d("AppSearch", "Database upgrades for version 2 executed");
+        }
+        if ((old_version < 3) && (new_version >= 3)) {
+            db.execSQL("CREATE TABLE " + TBL_COMMANDS + " " + SCHEMA_COMMANDS + ";");
+            FuzzyCommandSearchResult.initializeDB(db, TBL_COMMANDS);
+            Log.d("AppSearch", "Database upgrades for version 3 executed");
         }
     }
 

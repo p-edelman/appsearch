@@ -19,11 +19,14 @@ import android.widget.TextView;
 /**
  * Adapter to provide the data of the search results and present it in the
  * proper way.
+ *
+ * @param <T> the type of search result to hold, as a subclass of FuzzySearchResult
  */
-public class AppArrayAdapter extends ArrayAdapter<AppData> {
+public class SearchResultArrayAdapter<T extends FuzzySearchResult>
+        extends ArrayAdapter<T> {
 
-    // The list of application data we need to format.
-    private List<AppData> m_app_data;
+    // The list of search results we need to format.
+    private List<T> m_search_result;
 
     // The central package manager
     private PackageManager m_package_manager;
@@ -31,11 +34,11 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
     // Flag to indicate whether the matched characters should be highlighted.
     private boolean m_render_clear;
 
-    public AppArrayAdapter(Context context, int textview_resource_id, List<AppData> app_data) {
-        super(context, textview_resource_id, app_data);
-        m_app_data = app_data;
+    public SearchResultArrayAdapter(Context context, int textview_resource_id, List<T> search_result) {
+        super(context, textview_resource_id, search_result);
+        m_search_result   = search_result;
         m_package_manager = context.getPackageManager();
-        m_render_clear = false;
+        m_render_clear    = false;
     }
 
     /**
@@ -49,16 +52,20 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
      */
     @Override
     public View getView(int position, View convert_view, ViewGroup parent) {
-        while (position < m_app_data.size()) {
-            AppData app_data = m_app_data.get(position);
-            View row_view = renderRow(app_data, convert_view, parent);
+        while (position < m_search_result.size()) {
+            FuzzySearchResult search_data = m_search_result.get(position);
+            View row_view = renderRow(search_data, convert_view, parent);
             if (row_view != null) {
                 return row_view;
-            } else {
-                // App is not installed anymore
+            } else if (search_data instanceof FuzzyAppSearchResult) {
+                // We're dealing with an app that is not installed anymore, so remove it from the
+                // database and move to the next.
+                // NOTE: it seems out of place to check for missing apps here, but it is in fact
+                // quite efficient to handle missing apps here along the way than to perform an
+                // explicit check each time for every search result.
                 DBHelper db_helper = DBHelper.getInstance(getContext());
-                db_helper.removePackage(app_data.package_name);
-                m_app_data.remove(position);
+                db_helper.removePackage(((FuzzyAppSearchResult) m_search_result).package_name);
+                m_search_result.remove(position);
                 notifyDataSetChanged();
             }
         }
@@ -71,12 +78,12 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
     /**
      * Render a single row in the list.
      *
-     * @param app_data     The AppData object describing the app
-     * @param parent       The parent view to attach the view to
-     * @param convert_view a possibly recycled view (see getView())
+     * @param search_result The FuzzySearchResult object describing the result
+     * @param parent        The parent view to attach the view to
+     * @param convert_view  a possibly recycled view (see getView())
      * @return the rendered view, or None if rendering failed
      */
-    private View renderRow(AppData app_data, View convert_view, ViewGroup parent) {
+    private View renderRow(FuzzySearchResult search_result, View convert_view, ViewGroup parent) {
         // Instantiate or recycle the row view
         View row_view = null;
         if (convert_view != null) {
@@ -89,19 +96,24 @@ public class AppArrayAdapter extends ArrayAdapter<AppData> {
         // Set icon
         ImageView image_view = (ImageView) row_view.findViewById(R.id.AppIcon);
         Drawable icon;
-        try {
-            icon = m_package_manager.getApplicationIcon(app_data.package_name);
+        if (search_result instanceof FuzzyCommandSearchResult) {
+            icon = getContext().getResources().getDrawable(android.R.drawable.ic_menu_manage);
             image_view.setImageDrawable(icon);
-        } catch (NameNotFoundException e) {
-            return null;
+        } else if (search_result instanceof FuzzyAppSearchResult) {
+            try {
+                icon = m_package_manager.getApplicationIcon(((FuzzyAppSearchResult)search_result).package_name);
+                image_view.setImageDrawable(icon);
+            } catch (NameNotFoundException e) {
+                return null;
+            }
         }
 
         // Set text; make the matching letters underlined and bold
         TextView text_view = (TextView) row_view.findViewById(R.id.AppName);
-        text_view.setText(app_data.name, TextView.BufferType.SPANNABLE);
-        if (!m_render_clear && app_data.char_matches != null) {
+        text_view.setText(search_result.name, TextView.BufferType.SPANNABLE);
+        if (!m_render_clear && search_result.char_matches != null) {
             Spannable spannable = (Spannable) text_view.getText();
-            for (Integer index : app_data.char_matches) {
+            for (Integer index : search_result.char_matches) {
                 spannable.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), index, index + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                 spannable.setSpan(new UnderlineSpan(), index, index + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             }

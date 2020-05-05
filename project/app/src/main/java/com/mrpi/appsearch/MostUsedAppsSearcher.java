@@ -49,9 +49,9 @@ public class MostUsedAppsSearcher {
     /**
      * Query the database to find the most used apps.
      */
-    public ArrayList<FuzzyAppSearchResult> search() {
+    public ArrayList<AppSearchResult> search() {
         // Our return object
-        ArrayList<FuzzyAppSearchResult> apps = new ArrayList<FuzzyAppSearchResult>();
+        ArrayList<AppSearchResult> apps = new ArrayList<AppSearchResult>();
 
         // Open the database
         SQLiteDatabase db = null;
@@ -84,7 +84,7 @@ public class MostUsedAppsSearcher {
                 if (intent != null) { // Intent will be null if package has been uninstalled, so we filter out these apps here
                     ActivityInfo activity_info = intent.resolveActivityInfo(m_package_manager, 0);
                     String name = activity_info.loadLabel(m_package_manager).toString();
-                    FuzzyAppSearchResult app_data = new FuzzyAppSearchResult(name, package_name);
+                    AppSearchResult app_data = new AppSearchResult(name, package_name);
 
                     // If the package is already present in the list, this new entry has a
                     // lower score so we can ignore it.

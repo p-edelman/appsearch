@@ -81,7 +81,7 @@ public class DBHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE metadata " + SCHEMA_METADATA);
         db.execSQL("CREATE TABLE " + TBL_RAW_DATA + " " + SCHEMA_RAW_DATA);
         db.execSQL("CREATE TABLE " + TBL_COMMANDS + " " + SCHEMA_COMMANDS);
-        FuzzyCommandSearchResult.initializeDB(db, TBL_COMMANDS);
+        CommandSearchResult.initializeDB(db, TBL_COMMANDS);
         db.setTransactionSuccessful();
         db.endTransaction();
         Log.d("AppSearch", "Database initialized");
@@ -97,7 +97,7 @@ public class DBHelper extends SQLiteOpenHelper {
         }
         if ((old_version < 3) && (new_version >= 3)) {
             db.execSQL("CREATE TABLE " + TBL_COMMANDS + " " + SCHEMA_COMMANDS + ";");
-            FuzzyCommandSearchResult.initializeDB(db, TBL_COMMANDS);
+            CommandSearchResult.initializeDB(db, TBL_COMMANDS);
             Log.d("AppSearch", "Database upgrades for version 3 executed");
         }
     }

@@ -20,7 +20,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -74,7 +73,7 @@ public class MainActivity
     private Future<?> m_search_future;
 
     // The list of matched apps or commands
-    private ArrayList<? extends FuzzySearchResult> m_search_results;
+    private ArrayList<? extends SearchResult> m_search_results;
 
     // When the user launches an app, a waiting spinner is presented to let her know something is
     // happening.
@@ -146,7 +145,7 @@ public class MainActivity
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 try {
-                    launch((FuzzySearchResult) parent.getItemAtPosition(position));
+                    launch((SearchResult) parent.getItemAtPosition(position));
                 } catch (ClassCastException e) {}
             }
         };
@@ -154,10 +153,10 @@ public class MainActivity
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 try {
-                    launch((FuzzySearchResult) parent.getItemAtPosition(position));
+                    launch((SearchResult) parent.getItemAtPosition(position));
                 } catch (ClassCastException e) {
                     // Silently ignore this, since results are guaranteed to be derived from
-                    // FuzzySearchResult.
+                    // SearchResult.
                 }
             }
         });
@@ -170,22 +169,22 @@ public class MainActivity
 
     /**
      * Perform the action with the result that the user selected from the GUI. This is normally
-     * an app that should be opened (captured using FuzzyAppSearchResult), but may be a command
-     * as well (a FuzzyCommandSearchResult), in which case the proper action is dispatched.
+     * an app that should be opened (captured using AppSearchResult), but may be a command
+     * as well (a CommandSearchResult), in which case the proper action is dispatched.
      *
-     * @param search_result the FuzzySearchResult that the user selected.
+     * @param search_result the SearchResult that the user selected.
      */
-    private void launch(FuzzySearchResult search_result) {
-        if (search_result instanceof FuzzyAppSearchResult) {
-            launchApp((FuzzyAppSearchResult)search_result);
-        } else if (search_result instanceof FuzzyCommandSearchResult) {
-            switch (((FuzzyCommandSearchResult) search_result).command) {
+    private void launch(SearchResult search_result) {
+        if (search_result instanceof AppSearchResult) {
+            launchApp((AppSearchResult)search_result);
+        } else if (search_result instanceof CommandSearchResult) {
+            switch (((CommandSearchResult) search_result).command) {
                 case EXPORT_DB:
                     sendUsageData();
                     break;
                 case COLLECT_RAW:
                 case DONT_COLLECT_RAW:
-                    boolean collect_raw = (((FuzzyCommandSearchResult) search_result).command) == FuzzyCommandSearchResult.CommandCode.COLLECT_RAW;
+                    boolean collect_raw = (((CommandSearchResult) search_result).command) == CommandSearchResult.CommandCode.COLLECT_RAW;
                     SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
                     editor.putBoolean(PREFS_COLLECT_RAW, collect_raw);
                     if (m_count_decay != null) {
@@ -299,7 +298,7 @@ public class MainActivity
      * The entry point to launch an app. This takes care of all the housekeeping and makes sure this
      * app is properly closed before launching the other app.
      */
-    private void launchApp(FuzzyAppSearchResult app_data) {
+    private void launchApp(AppSearchResult app_data) {
         // Get the app name from the GUI list
         final String name = app_data.name;
         final String package_name = app_data.package_name;
@@ -380,7 +379,7 @@ public class MainActivity
      *
      * @param callable a Callable that should return an ArrayList of AppData objects.
      */
-    private <T extends FuzzySearchResult> void doBackgroundSearch(Callable<ArrayList<T>> callable) {
+    private <T extends SearchResult> void doBackgroundSearch(Callable<ArrayList<T>> callable) {
         if (m_search_future != null) m_search_future.cancel(true);
         m_search_future = m_executor_service.submit(() -> {
             try {
@@ -401,7 +400,7 @@ public class MainActivity
      *
      * @param apps the result from the Callable being passed to doBackgroundSearch()
      */
-    public <T extends FuzzySearchResult> void onBackgroundSearchFinished(ArrayList<T> apps) {
+    public <T extends SearchResult> void onBackgroundSearchFinished(ArrayList<T> apps) {
         m_search_results = apps;
 
         // Use the first result as the "selected" app
@@ -423,7 +422,7 @@ public class MainActivity
         if (apps.size() > 0) {
             adapter = new SearchResultArrayAdapter(this, R.id.resultsListView, apps.subList(1, apps.size()));
         } else {
-            adapter = new SearchResultArrayAdapter(this, R.id.resultsListView, new ArrayList<FuzzySearchResult>());
+            adapter = new SearchResultArrayAdapter(this, R.id.resultsListView, new ArrayList<SearchResult>());
         }
         ListView results_list_view = (ListView) findViewById(R.id.resultsListView);
         results_list_view.setAdapter(adapter);

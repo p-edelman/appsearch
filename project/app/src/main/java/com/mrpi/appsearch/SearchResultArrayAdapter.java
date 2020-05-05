@@ -3,8 +3,6 @@ package com.mrpi.appsearch;
 import java.util.List;
 
 import android.content.Context;
-import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.drawable.Drawable;
 import android.text.Spannable;
 import android.text.style.StyleSpan;
@@ -20,9 +18,9 @@ import android.widget.TextView;
  * Adapter to provide the data of the search results and present it in the
  * proper way.
  *
- * @param <T> the type of search result to hold, as a subclass of FuzzySearchResult
+ * @param <T> the type of search result to hold, as a subclass of SearchResult
  */
-public class SearchResultArrayAdapter<T extends FuzzySearchResult>
+public class SearchResultArrayAdapter<T extends SearchResult>
         extends ArrayAdapter<T> {
 
     // The list of search results we need to format.
@@ -49,18 +47,18 @@ public class SearchResultArrayAdapter<T extends FuzzySearchResult>
     @Override
     public View getView(int position, View convert_view, ViewGroup parent) {
         while (position < m_search_result.size()) {
-            FuzzySearchResult search_data = m_search_result.get(position);
-            View row_view = renderRow(search_data, convert_view, parent);
+            SearchResult search_result = m_search_result.get(position);
+            View row_view = renderRow(search_result, convert_view, parent);
             if (row_view != null) {
                 return row_view;
-            } else if (search_data instanceof FuzzyAppSearchResult) {
+            } else if (search_result instanceof AppSearchResult) {
                 // We're dealing with an app that is not installed anymore, so remove it from the
                 // database and move to the next.
                 // NOTE: it seems out of place to check for missing apps here, but it is in fact
                 // quite efficient to handle missing apps here along the way than to perform an
                 // explicit check each time for every search result.
                 DBHelper db_helper = DBHelper.getInstance(getContext());
-                db_helper.removePackage(((FuzzyAppSearchResult) m_search_result).package_name);
+                db_helper.removePackage(((AppSearchResult) m_search_result).package_name);
                 m_search_result.remove(position);
                 notifyDataSetChanged();
             }
@@ -74,12 +72,12 @@ public class SearchResultArrayAdapter<T extends FuzzySearchResult>
     /**
      * Render a single row in the list.
      *
-     * @param search_result The FuzzySearchResult object describing the result
+     * @param search_result The SearchResult object describing the result
      * @param parent        The parent view to attach the view to
      * @param convert_view  a possibly recycled view (see getView())
      * @return the rendered view, or None if rendering failed
      */
-    private View renderRow(FuzzySearchResult search_result, View convert_view, ViewGroup parent) {
+    private View renderRow(SearchResult search_result, View convert_view, ViewGroup parent) {
         // Instantiate or recycle the row view
         View row_view = null;
         if (convert_view != null) {

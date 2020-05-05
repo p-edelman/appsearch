@@ -11,7 +11,7 @@ import java.util.EnumMap;
  * Container for holding the data of a "command", a text string that the user can type into the
  * search box to access developer options.
  */
-public class FuzzyCommandSearchResult extends FuzzySearchResult {
+public class CommandSearchResult extends SearchResult {
     /**
      * Enum for listing all the commands that we know of.
      */
@@ -23,7 +23,7 @@ public class FuzzyCommandSearchResult extends FuzzySearchResult {
 
     public CommandCode command;
 
-    public FuzzyCommandSearchResult(String name, CommandCode command) {
+    public CommandSearchResult(String name, CommandCode command) {
         super(name);
         this.command = command;
     }

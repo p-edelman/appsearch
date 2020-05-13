@@ -1,11 +1,5 @@
 package com.mrpi.appsearch;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -20,7 +14,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -180,7 +173,14 @@ public class MainActivity
         } else if (search_result instanceof CommandSearchResult) {
             switch (((CommandSearchResult) search_result).command) {
                 case EXPORT_DB:
-                    sendUsageData();
+                    // Create an intent for sharing the db, attach a content:// uri with for the
+                    // DebugContentProvider, and wrap the whole thing in a chooser so the user can
+                    // select how to share the database.
+                    Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+                    intent.setType("*/*");
+                    intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "AppSearch database");
+                    intent.putExtra(android.content.Intent.EXTRA_STREAM, DebugContentProvider.getUriForDBExport());
+                    startActivity(Intent.createChooser(intent, "Share via"));
                     break;
                 case COLLECT_RAW:
                 case DONT_COLLECT_RAW:
@@ -426,49 +426,5 @@ public class MainActivity
         }
         ListView results_list_view = (ListView) findViewById(R.id.resultsListView);
         results_list_view.setAdapter(adapter);
-    }
-
-    private void sendUsageData() {
-        boolean file_copied = false;
-        File external_file = new File(getExternalCacheDir().toString(), "AppSearch.sqlite");
-        if (external_file.exists()) {
-            external_file.delete();
-        }
-
-        // Copy the db to a readable location
-        InputStream is = null;
-        OutputStream os = null;
-        try {
-            external_file.createNewFile();
-            SQLiteDatabase db = DBHelper.getInstance(getApplicationContext()).getReadableDatabase();
-            is = new FileInputStream(db.getPath());
-            os = new FileOutputStream(external_file);
-            // Transfer bytes from in to out
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = is.read(buf)) > 0) {
-                os.write(buf, 0, len);
-            }
-            is.close();
-            os.close();
-            file_copied = true;
-        } catch (IOException e) {
-        }
-
-        if (file_copied) {
-            // Create the intent
-            Intent intent = new Intent(android.content.Intent.ACTION_SEND);
-            intent.setType("*/*");
-            intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "AppSearch database");
-
-            // Attach the file to the intent
-            Uri db_uri = Uri.fromFile(external_file);
-            intent.putExtra(android.content.Intent.EXTRA_STREAM, db_uri);
-
-            // Run the intent
-            startActivity(Intent.createChooser(intent, "Share via"));
-        } else {
-            Log.e("AppSearch", "Couldn't copy the database file");
-        }
     }
 }

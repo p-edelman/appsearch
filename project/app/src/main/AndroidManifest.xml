@@ -80,6 +80,12 @@
                   android:theme="@style/theme_config_dialog"
                   android:launchMode="singleInstance">
         </activity>
+        
+        <provider
+            android:authorities="org.mrpi.appsearch.provider"
+            android:name=".DebugContentProvider"
+            android:exported="false"
+            android:grantUriPermissions="true"/>
     </application>
 
 </manifest>

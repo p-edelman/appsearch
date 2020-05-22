@@ -14,6 +14,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
@@ -79,7 +80,7 @@ public class MainActivity
     /**
      * Keys for individual preferences
      */
-    private final static String PREFS_COLLECT_RAW = "collect_raw_data";
+    private final static String PREFS_COLLECT_RAW_CLICKS = "collect_raw_clicks";
 
     @Override
     protected void onCreate(Bundle saved_instance) {
@@ -191,20 +192,22 @@ public class MainActivity
                     }
                     startActivity(Intent.createChooser(intent, "Share via"));
                     break;
-                case COLLECT_RAW:
-                case DONT_COLLECT_RAW:
-                    boolean collect_raw = (code == CommandSearchResult.CommandCode.COLLECT_RAW);
+                case COLLECT_RAW_CLICKS:
+                case DONT_COLLECT_RAW_CLICKS:
+                    boolean collect_raw = (code == CommandSearchResult.CommandCode.COLLECT_RAW_CLICKS);
                     SharedPreferences.Editor prefs_editor = getPreferences(Context.MODE_PRIVATE).edit();
-                    prefs_editor.putBoolean(PREFS_COLLECT_RAW, collect_raw);
+                    prefs_editor.putBoolean(PREFS_COLLECT_RAW_CLICKS, collect_raw);
                     if (m_count_decay != null) {
                         m_count_decay.setRawDataCollection(collect_raw);
                     }
 
                     String toast;
                     if (collect_raw) {
-                        toast = "All app openings will be saved from now on";
+                        toast = "All app openings will be saved to the database";
                     } else {
-                        toast = "App openings won't be saved anymore";
+                        toast = "App openings won't be saved and are cleared from the database";
+                        SQLiteDatabase db = DBHelper.getInstance(this).getReadableDatabase();
+                        db.delete(DBHelper.TBL_RAW_DATA, null, null);
                     }
                     prefs_editor.apply();
                     Toast.makeText(getApplicationContext(), toast, Toast.LENGTH_LONG).show();
@@ -321,7 +324,7 @@ public class MainActivity
         // Save the launch time slot to the database
         if (m_count_decay == null) {
             m_count_decay = new CountAndDecay(DBHelper.getInstance(this));
-            m_count_decay.setRawDataCollection(getPreferences(Context.MODE_PRIVATE).getBoolean(PREFS_COLLECT_RAW, false));
+            m_count_decay.setRawDataCollection(getPreferences(Context.MODE_PRIVATE).getBoolean(PREFS_COLLECT_RAW_CLICKS, false));
         }
         m_count_decay.countAppLaunch(package_name);
 

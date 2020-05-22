@@ -17,8 +17,8 @@ public class CommandSearchResult extends SearchResult {
      */
     public enum CommandCode {
         EXPORT_DB,
-        COLLECT_RAW,
-        DONT_COLLECT_RAW,
+        COLLECT_RAW_CLICKS,
+        DONT_COLLECT_RAW_CLICKS,
         EXPORT_STACKTRACES,
     }
 
@@ -51,8 +51,8 @@ public class CommandSearchResult extends SearchResult {
         EnumMap<CommandCode, String> commands = new EnumMap<CommandCode, String>(CommandCode.class);
         commands.put(CommandCode.EXPORT_DB, "/export database");
         commands.put(CommandCode.EXPORT_STACKTRACES, "/export stacktraces");
-        commands.put(CommandCode.COLLECT_RAW, "/log app openings");
-        commands.put(CommandCode.DONT_COLLECT_RAW, "/don't log app openings");
+        commands.put(CommandCode.COLLECT_RAW_CLICKS, "/log app openings");
+        commands.put(CommandCode.DONT_COLLECT_RAW_CLICKS, "/don't log app openings");
 
         for (CommandCode code : commands.keySet()) {
             ContentValues values = new ContentValues();

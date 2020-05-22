@@ -18,7 +18,8 @@ public class CommandSearchResult extends SearchResult {
     public enum CommandCode {
         EXPORT_DB,
         COLLECT_RAW,
-        DONT_COLLECT_RAW
+        DONT_COLLECT_RAW,
+        EXPORT_STACKTRACES,
     }
 
     public CommandCode command;
@@ -32,7 +33,7 @@ public class CommandSearchResult extends SearchResult {
      * A command icon is always the built-in "settings" icon (ic_menu_manage).
      *
      * @param context the application context
-     * @return a Drawable fro ic_menu_manage.
+     * @return a Drawable from ic_menu_manage.
      */
     public Drawable resolveIcon(Context context) {
         return context.getResources().getDrawable(android.R.drawable.ic_menu_manage);
@@ -49,14 +50,15 @@ public class CommandSearchResult extends SearchResult {
     public static void initializeDB(SQLiteDatabase db, String table) {
         EnumMap<CommandCode, String> commands = new EnumMap<CommandCode, String>(CommandCode.class);
         commands.put(CommandCode.EXPORT_DB, "/export database");
-        commands.put(CommandCode.COLLECT_RAW, "/collect raw data");
-        commands.put(CommandCode.DONT_COLLECT_RAW, "/don't collect raw data");
+        commands.put(CommandCode.EXPORT_STACKTRACES, "/export stacktraces");
+        commands.put(CommandCode.COLLECT_RAW, "/log app openings");
+        commands.put(CommandCode.DONT_COLLECT_RAW, "/don't log app openings");
 
         for (CommandCode code : commands.keySet()) {
             ContentValues values = new ContentValues();
             values.put("name", commands.get(code));
             values.put("command_code", code.ordinal());
-            db.insert(table, null, values);
+            db.replace(table, null, values);
         }
 
     }

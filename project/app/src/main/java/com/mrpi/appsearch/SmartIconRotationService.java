@@ -18,9 +18,9 @@ public class SmartIconRotationService extends Service {
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                Intent update_intent = new Intent(context, SmartIcon.class);
-                update_intent.setAction("ACTION_WIDGET_UPDATE");
-                context.sendBroadcast(update_intent);
+            Intent update_intent = new Intent(context, SmartIcon.class);
+            update_intent.setAction("ACTION_WIDGET_UPDATE");
+            context.sendBroadcast(update_intent);
             }
         };
 

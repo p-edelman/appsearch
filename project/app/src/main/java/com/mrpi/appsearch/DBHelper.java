@@ -32,7 +32,7 @@ public class DBHelper extends SQLiteOpenHelper {
     private static DBHelper m_instance;
 
     /** Housekeeping parameters */
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 4;
     private static final String DB_NAME = "apps.sqlite";
 
     /** The schema for the table with installed apps. */
@@ -58,6 +58,11 @@ public class DBHelper extends SQLiteOpenHelper {
     /** The metadata table is a simple text key/numeric value storage. */
     private static final String SCHEMA_METADATA = "(field TEXT PRIMARY KEY, content INTEGER)";
 
+    /** A table for saving stacktraces, if the user chooses to do so. timestamp is a ISO8601
+     *  string */
+    public static final String TBL_STACKTRACES = "stacktraces";
+    private static final String SCHEMA_STACKTRACES = "(timestamp TEXT DEFAULT CURRENT_TIMESTAMP, stacktrace TEXT)";
+
     private DBHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
     }
@@ -82,6 +87,7 @@ public class DBHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE " + TBL_RAW_DATA + " " + SCHEMA_RAW_DATA);
         db.execSQL("CREATE TABLE " + TBL_COMMANDS + " " + SCHEMA_COMMANDS);
         CommandSearchResult.initializeDB(db, TBL_COMMANDS);
+        db.execSQL("CREATE TABLE " + TBL_STACKTRACES + " " + SCHEMA_STACKTRACES);
         db.setTransactionSuccessful();
         db.endTransaction();
         Log.d("AppSearch", "Database initialized");
@@ -99,6 +105,10 @@ public class DBHelper extends SQLiteOpenHelper {
             db.execSQL("CREATE TABLE " + TBL_COMMANDS + " " + SCHEMA_COMMANDS + ";");
             CommandSearchResult.initializeDB(db, TBL_COMMANDS);
             Log.d("AppSearch", "Database upgrades for version 3 executed");
+        }
+        if ((old_version < 4) && (new_version >= 4)) {
+            db.execSQL("CREATE TABLE " + TBL_STACKTRACES + " " + SCHEMA_STACKTRACES + ";");
+            Log.d("AppSearch", "Database upgrades for version 4 executed");
         }
     }
 

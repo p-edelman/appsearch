@@ -15,7 +15,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -84,6 +83,9 @@ public class MainActivity
 
     @Override
     protected void onCreate(Bundle saved_instance) {
+        // First, make sure we can catch all unhandled Exception
+        Thread.setDefaultUncaughtExceptionHandler(new ExceptionLogger(this));
+
         // We actually never want to restore state, we should always come up as clean as possible,
         // so we pass in null here.
         super.onCreate(null);
@@ -171,34 +173,41 @@ public class MainActivity
         if (search_result instanceof AppSearchResult) {
             launchApp((AppSearchResult)search_result);
         } else if (search_result instanceof CommandSearchResult) {
-            switch (((CommandSearchResult) search_result).command) {
+            CommandSearchResult.CommandCode code = ((CommandSearchResult) search_result).command;
+            switch (code) {
                 case EXPORT_DB:
+                case EXPORT_STACKTRACES:
                     // Create an intent for sharing the db, attach a content:// uri with for the
                     // DebugContentProvider, and wrap the whole thing in a chooser so the user can
                     // select how to share the database.
                     Intent intent = new Intent(android.content.Intent.ACTION_SEND);
                     intent.setType("*/*");
-                    intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "AppSearch database");
-                    intent.putExtra(android.content.Intent.EXTRA_STREAM, DebugContentProvider.getUriForDBExport());
+                    if (code == CommandSearchResult.CommandCode.EXPORT_DB) {
+                        intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "AppSearch database");
+                        intent.putExtra(android.content.Intent.EXTRA_STREAM, DebugContentProvider.getUriForAction(DebugContentProvider.Action.EXPORT_DB));
+                    } else {
+                        intent.putExtra(android.content.Intent.EXTRA_SUBJECT, "AppSearch stacktraces");
+                        intent.putExtra(android.content.Intent.EXTRA_STREAM, DebugContentProvider.getUriForAction(DebugContentProvider.Action.EXPORT_STACKTRACES));
+                    }
                     startActivity(Intent.createChooser(intent, "Share via"));
                     break;
                 case COLLECT_RAW:
                 case DONT_COLLECT_RAW:
-                    boolean collect_raw = (((CommandSearchResult) search_result).command) == CommandSearchResult.CommandCode.COLLECT_RAW;
-                    SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
-                    editor.putBoolean(PREFS_COLLECT_RAW, collect_raw);
+                    boolean collect_raw = (code == CommandSearchResult.CommandCode.COLLECT_RAW);
+                    SharedPreferences.Editor prefs_editor = getPreferences(Context.MODE_PRIVATE).edit();
+                    prefs_editor.putBoolean(PREFS_COLLECT_RAW, collect_raw);
                     if (m_count_decay != null) {
                         m_count_decay.setRawDataCollection(collect_raw);
                     }
-                    editor.apply();
 
-                    String msg;
+                    String toast;
                     if (collect_raw) {
-                        msg = "All app openings will be saved from now on";
+                        toast = "All app openings will be saved from now on";
                     } else {
-                        msg = "App openings won't be saved anymore";
+                        toast = "App openings won't be saved anymore";
                     }
-                    Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                    prefs_editor.apply();
+                    Toast.makeText(getApplicationContext(), toast, Toast.LENGTH_LONG).show();
                     break;
             }
         }

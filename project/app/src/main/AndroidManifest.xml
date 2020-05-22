@@ -84,7 +84,7 @@
         <provider
             android:authorities="org.mrpi.appsearch.provider"
             android:name=".DebugContentProvider"
-            android:exported="false"
+            android:exported="true"
             android:grantUriPermissions="true"/>
     </application>
 

@@ -61,7 +61,7 @@ public class DBHelper extends SQLiteOpenHelper {
     /** A table for saving stacktraces, if the user chooses to do so. timestamp is a ISO8601
      *  string */
     public static final String TBL_STACKTRACES = "stacktraces";
-    private static final String SCHEMA_STACKTRACES = "(timestamp TEXT DEFAULT CURRENT_TIMESTAMP, stacktrace TEXT)";
+    public static final String SCHEMA_STACKTRACES = "(timestamp TEXT DEFAULT (datetime('now', 'localtime')), stacktrace TEXT)";
 
     private DBHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
